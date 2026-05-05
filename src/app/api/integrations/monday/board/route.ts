@@ -31,6 +31,11 @@ export async function GET(request: Request) {
     );
   }
 
+  // The preview route intentionally only requires MONDAY_API_TOKEN and
+  // MONDAY_OPPORTUNITIES_BOARD_ID (covered by isMondayConfigured). Sync-only
+  // column IDs (loan amount, expected commission, referring agent) are NOT
+  // required here, because this endpoint is used to help discover those
+  // column IDs from the board itself.
   if (!isMondayConfigured()) {
     return NextResponse.json(
       { error: "Monday.com environment variables are missing." },

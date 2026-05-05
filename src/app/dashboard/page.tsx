@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
 
+import { AdminAgentManagement } from "@/components/admin-agent-management";
+import { AdminAnalytics } from "@/components/admin-analytics";
+import { AgentDashboardView } from "@/components/agent-dashboard-view";
 import { DashboardClient } from "@/components/dashboard-client";
 import { LogoutButton } from "@/components/logout-button";
 import { getSessionUser } from "@/lib/auth/session";
@@ -65,7 +68,15 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <DashboardClient clients={clients} canAddManualLead={isAdmin} />
+        {isAdmin ? (
+          <div className="grid gap-8 max-w-6xl mx-auto w-full">
+            <AdminAgentManagement />
+            <AdminAnalytics clients={clients} />
+            <DashboardClient clients={clients} canAddManualLead />
+          </div>
+        ) : (
+          <AgentDashboardView clients={clients} />
+        )}
       </main>
     </div>
   );

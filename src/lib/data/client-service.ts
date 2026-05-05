@@ -1,9 +1,25 @@
 import "server-only";
 
-import type { ClientRepository } from "@/lib/data/client-repository";
+import type {
+  ClientRepository,
+  MondayOpportunityUpsertRow,
+} from "@/lib/data/client-repository";
 import { getClientRepository } from "@/lib/data/client-repository";
 import { mapProfileRow } from "@/lib/auth/user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getMondayOpportunitySyncEnv, type MondayOpportunitySyncEnv } from "@/lib/integrations/monday/env";
+import {
+  getColumnDateYmd,
+  getColumnDisplayText,
+  getColumnText,
+  getMondayService,
+  parseMoney,
+} from "@/lib/integrations/monday/service";
+import type {
+  MondayOpportunityItem,
+  MondayOpportunitySyncResult,
+  MondayOpportunitySyncRow,
+} from "@/lib/integrations/monday/types";
 import type { ClientRecord, ManualLeadInput, SessionUser, UserProfile } from "@/lib/types";
 
 export type ClientMvpDataSource = "supabase";
@@ -39,7 +55,9 @@ export interface ClientService {
   listAssignableAgents(): Promise<UserProfile[]>;
   createManualLead(input: ManualLeadInput): Promise<void>;
   getIntegrationState(): ClientIntegrationState;
-  syncFromMondayOpportunities(): Promise<never>;
+  syncFromMondayOpportunities(options?: {
+    demoItemLimit?: number;
+  }): Promise<MondayOpportunitySyncResult>;
 }
 
 const plannedMondaySync: MondayOpportunitySyncPlan = {
@@ -58,6 +76,52 @@ const plannedMondaySync: MondayOpportunitySyncPlan = {
     unmatchedBehavior: "leave-for-manual-review",
   },
 };
+
+type SyncProfile = {
+  id: string;
+  fullName: string;
+};
+
+const DEAL_STAGE_COLUMN_ID = "deal_stage";
+
+export function normalizePersonName(name: string): string {
+  return name
+    .normalize("NFKC")
+    .trim()
+    .toLowerCase()
+    .replace(/([a-z])([\u0590-\u05ff])/g, "$1 $2")
+    .replace(/([\u0590-\u05ff])([a-z])/g, "$1 $2")
+    .replace(/["'`´׳״.,;:!?()[\]{}<>]+/g, " ")
+    .replace(/[-_/\\|+]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function normalizePersonNameCompact(name: string): string {
+  return normalizePersonName(name).replace(/\s+/g, "");
+}
+
+export function mapMondayOpportunityToSyncCandidate(
+  item: MondayOpportunityItem,
+  syncEnv: MondayOpportunitySyncEnv
+): MondayOpportunitySyncRow {
+  const {
+    loanAmountColumnId,
+    expectedCommissionColumnId,
+    referringAgentColumnId,
+    dealCreationDateColumnId,
+  } = syncEnv;
+
+  return {
+    mondayItemId: item.id,
+    clientName: item.name.trim(),
+    leadStatus: getColumnText(item, DEAL_STAGE_COLUMN_ID) ?? "",
+    loanAmount: parseMoney(getColumnText(item, loanAmountColumnId)),
+    expectedCommission: parseMoney(getColumnText(item, expectedCommissionColumnId)),
+    referringAgentText: getColumnDisplayText(item, referringAgentColumnId),
+    dealCreatedAt: getColumnDateYmd(item, dealCreationDateColumnId),
+    sourceBoard: "opportunities",
+  };
+}
 
 class DefaultClientService implements ClientService {
   constructor(private readonly repository: ClientRepository) {}
@@ -91,10 +155,131 @@ class DefaultClientService implements ClientService {
     };
   }
 
-  async syncFromMondayOpportunities(): Promise<never> {
-    throw new Error(
-      "Monday opportunities sync is not implemented yet. Add the board field mapping, resolve the free-text referring agent against Supabase profiles, and then persist the resulting client records here."
-    );
+  async syncFromMondayOpportunities(options?: {
+    demoItemLimit?: number;
+  }): Promise<MondayOpportunitySyncResult> {
+    const startedAt = Date.now();
+    const env = getMondayOpportunitySyncEnv();
+    const requestedColumnIds = [
+      ...new Set(
+        [
+          "deal_stage",
+          env.dealCreationDateColumnId,
+          env.loanAmountColumnId,
+          env.expectedCommissionColumnId,
+          env.referringAgentColumnId,
+        ].filter((x): x is string => Boolean(x))
+      ),
+    ];
+    console.log("REF COLUMN", env.referringAgentColumnId);
+    console.log("REQUESTED COLUMNS", requestedColumnIds);
+
+    const syncFetch = await getMondayService().getOpportunityItemsForSync({
+      maxItems: options?.demoItemLimit,
+    });
+    const mondayItems = syncFetch.items;
+    const fetchMeta = syncFetch.meta;
+
+    const profiles = await this.listSyncProfiles();
+    const upsertRows: MondayOpportunityUpsertRow[] = [];
+    const unmatchedItems: MondayOpportunitySyncRow[] = [];
+    const lastSyncedAt = new Date().toISOString();
+    const profilesByName = new Map<string, SyncProfile>();
+    const sampleReferringAgents: string[] = [];
+
+    const pushReferringSample = (referringAgentText: string | undefined) => {
+      const t = referringAgentText?.trim();
+      if (!t || sampleReferringAgents.length >= 20) {
+        return;
+      }
+      sampleReferringAgents.push(t);
+      console.log("SAMPLE REF", referringAgentText);
+    };
+
+    for (const profile of profiles) {
+      profilesByName.set(normalizePersonName(profile.fullName), profile);
+      profilesByName.set(normalizePersonNameCompact(profile.fullName), profile);
+    }
+
+    for (const item of mondayItems) {
+      const candidate = mapMondayOpportunityToSyncCandidate(item, env);
+
+      pushReferringSample(candidate.referringAgentText);
+
+      const normalizedAgentName = normalizePersonName(candidate.referringAgentText ?? "");
+      const normalizedAgentNameCompact = normalizePersonNameCompact(
+        candidate.referringAgentText ?? ""
+      );
+      const matchedProfile = normalizedAgentName
+        ? profilesByName.get(normalizedAgentName) ??
+          profilesByName.get(normalizedAgentNameCompact)
+        : undefined;
+
+      if (!matchedProfile) {
+        unmatchedItems.push(candidate);
+      }
+
+      upsertRows.push({
+        mondayItemId: candidate.mondayItemId,
+        clientName: candidate.clientName,
+        leadStatus: candidate.leadStatus,
+        loanAmount: candidate.loanAmount,
+        expectedCommission: candidate.expectedCommission,
+        assignedAgentId: matchedProfile?.id ?? null,
+        referringAgentText: candidate.referringAgentText,
+        dealCreatedAt: candidate.dealCreatedAt ?? null,
+        sourceBoard: candidate.sourceBoard,
+        lastSyncedAt,
+      });
+    }
+
+    await this.repository.upsertMondayOpportunities(upsertRows);
+
+    const distinctReferringAgents = [
+      ...new Set(
+        upsertRows
+          .map((r) => r.referringAgentText?.trim())
+          .filter((t): t is string => Boolean(t))
+      ),
+    ].sort((a, b) => a.localeCompare(b, "he"));
+
+    const totalClientsInDatabaseAfterSync = await this.repository.countAllClients();
+    const durationMs = Date.now() - startedAt;
+
+    return {
+      referringAgentColumnId: env.referringAgentColumnId,
+      requestedColumnIds,
+      totalFetched: mondayItems.length,
+      syncedCount: upsertRows.length,
+      unmatchedCount: unmatchedItems.length,
+      unmatchedItems,
+      sampleReferringAgents,
+      distinctReferringAgents,
+      boardItemCount: fetchMeta.boardItemCount,
+      pagesFetched: fetchMeta.pagesFetched,
+      hasMore: fetchMeta.hasMore,
+      lastCursor: fetchMeta.lastCursor,
+      stoppedReason: fetchMeta.stoppedReason,
+      durationMs,
+      totalClientsInDatabaseAfterSync,
+    };
+  }
+
+  private async listSyncProfiles(): Promise<SyncProfile[]> {
+    const supabase = await getSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data ?? []).map((profile) => ({
+      id: profile.id,
+      fullName: profile.full_name,
+    }));
   }
 }
 

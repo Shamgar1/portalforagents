@@ -1,10 +1,10 @@
 export async function getSessionUser() {
   try {
-    const [{ buildSessionUser, mapProfileRow }, { getSupabaseServerClient }] = await Promise.all([
+    const [{ buildSessionUser, mapProfileRow }, { getSupabaseServerReadOnlyClient }] = await Promise.all([
       import("@/lib/auth/user"),
       import("@/lib/supabase/server")
     ]);
-    const supabase = await getSupabaseServerClient();
+    const supabase = await getSupabaseServerReadOnlyClient();
     const {
       data: { user },
       error: authError

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ─── Design tokens ───────────────────────────────────────── */
+/* â”€â”€â”€ Design tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 :root {
   --bg: #eef2ff;
   --surface: #ffffff;
@@ -24,7 +24,7 @@
   --navbar-h: 64px;
 }
 
-/* ─── Reset ───────────────────────────────────────────────── */
+/* â”€â”€â”€ Reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 *,
 *::before,
 *::after {
@@ -56,7 +56,7 @@ a {
   text-decoration: none;
 }
 
-/* ─── Navbar ──────────────────────────────────────────────── */
+/* â”€â”€â”€ Navbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .navbar {
   position: sticky;
   top: 0;
@@ -155,7 +155,7 @@ a {
   letter-spacing: 0.02em;
 }
 
-/* ─── Buttons ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -200,7 +200,7 @@ a {
   border-color: #cbd5e1;
 }
 
-/* ─── Page layouts ────────────────────────────────────────── */
+/* â”€â”€â”€ Page layouts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -226,7 +226,7 @@ a {
   gap: 20px;
 }
 
-/* ─── Card base ───────────────────────────────────────────── */
+/* â”€â”€â”€ Card base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -234,7 +234,7 @@ a {
   box-shadow: var(--shadow);
 }
 
-/* ─── Coloured stat-card accents ──────────────────────────── */
+/* â”€â”€â”€ Coloured stat-card accents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stat-card--indigo {
   border-top: 3px solid #6366f1;
 }
@@ -247,11 +247,43 @@ a {
   border-top: 3px solid #8b5cf6;
 }
 
+.stat-card--teal {
+  border-top: 3px solid #0d9488;
+}
+
+.stat-card--rose {
+  border-top: 3px solid #f43f5e;
+}
+
 .stat-card--indigo .stat-value  { color: #4f46e5; }
 .stat-card--emerald .stat-value { color: #059669; }
 .stat-card--violet .stat-value  { color: #7c3aed; }
+.stat-card--teal .stat-value { color: #0f766e; }
+.stat-card--rose .stat-value { color: #be123c; }
 
-/* ─── Login card ──────────────────────────────────────────── */
+.table-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.table-pagination-meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.table-pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* â”€â”€â”€ Login card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .login-card {
   width: min(100%, 420px);
   padding: 40px;
@@ -311,7 +343,7 @@ a {
   gap: 16px;
 }
 
-/* ─── Form fields ─────────────────────────────────────────── */
+/* â”€â”€â”€ Form fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .field {
   display: grid;
   gap: 6px;
@@ -362,7 +394,7 @@ a {
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
 }
 
-/* ─── Error ───────────────────────────────────────────────── */
+/* â”€â”€â”€ Error â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .error-banner {
   display: flex;
   align-items: center;
@@ -375,7 +407,7 @@ a {
   font-size: 0.875rem;
 }
 
-/* ─── Demo credentials box ────────────────────────────────── */
+/* â”€â”€â”€ Demo credentials box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .demo-block {
   background: var(--surface-2);
   border: 1px solid var(--line);
@@ -421,24 +453,24 @@ a {
   border-radius: 4px;
 }
 
-/* ─── Page heading ────────────────────────────────────────── */
+/* â”€â”€â”€ Page heading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page-heading {
   display: grid;
   gap: 4px;
 }
 
 .page-heading h1 {
-  font-size: 1.55rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--text);
 }
 
 .page-heading p {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
-/* ─── Stats row ───────────────────────────────────────────── */
+/* â”€â”€â”€ Stats row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -459,14 +491,14 @@ a {
 }
 
 .stat-value {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--text);
   line-height: 1.15;
 }
 
 .stat-value-compact {
-  font-size: 1.55rem;
+  font-size: 1.25rem;
 }
 
 .stat-sub {
@@ -530,7 +562,7 @@ a {
   text-align: right;
 }
 
-/* ─── Table card (dashboard leads) ────────────────────────── */
+/* â”€â”€â”€ Table card (dashboard leads) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .table-card {
   border: 1px solid #ddd6fe;
   border-radius: 28px;
@@ -548,6 +580,11 @@ a {
   border-bottom: 1px solid #ede9fe;
 }
 
+.table-card-toolbar--compact {
+  padding: 12px 20px 10px;
+  gap: 12px;
+}
+
 .table-card-title-group {
   display: flex;
   flex-direction: column;
@@ -559,16 +596,16 @@ a {
 
 .table-card-title {
   margin: 0;
-  font-size: 72px;
-  line-height: 1.02;
-  font-weight: 800;
+  font-size: 1rem;
+  line-height: 1.3;
+  font-weight: 700;
   color: #0f172a;
 }
 
 .table-card-subtitle {
   margin: 0;
-  font-size: 18px;
-  line-height: 1.6;
+  font-size: 0.8125rem;
+  line-height: 1.45;
   color: #64748b;
 }
 
@@ -579,6 +616,16 @@ a {
   justify-content: flex-start;
   gap: 12px;
   flex: 0 1 auto;
+}
+
+.table-card-range-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px 14px;
+  border-bottom: 1px solid #ede9fe;
+  background: #fafaff;
 }
 
 .table-count-badge {
@@ -616,6 +663,127 @@ a {
   overflow-x: auto;
 }
 
+/* â”€â”€â”€ Agent dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.agent-dashboard-shell {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  gap: 24px;
+}
+
+.dashboard-card {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.dashboard-card .section-header {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 22px;
+  text-align: right;
+}
+
+.dashboard-card .section-header h2,
+.agent-section-title {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.25;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.kpi-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px 20px;
+  text-align: right;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.kpi-card span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.kpi-card strong {
+  display: block;
+  font-size: 1.8rem;
+  line-height: 1.1;
+  font-weight: 850;
+  color: #1e1b4b;
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-table-card {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.agent-table-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  text-align: right;
+}
+
+.agent-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ddd6fe;
+  background: #f5f3ff;
+  color: #6d28d9;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .dashboard-card,
+  .agent-table-card {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-card .section-header h2,
+  .agent-section-title {
+    font-size: 1.15rem;
+  }
+
+  .kpi-card strong {
+    font-size: 1.45rem;
+  }
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -644,12 +812,18 @@ tbody tr:hover {
     align-items: stretch;
   }
 
-  .table-card-title {
-    font-size: 52px;
-  }
-
   .table-card-controls {
     justify-content: flex-start;
+  }
+}
+
+@media (min-width: 768px) {
+  .table-card-title {
+    font-size: 1.125rem;
+  }
+
+  .table-card-subtitle {
+    font-size: 0.875rem;
   }
 }
 
@@ -676,7 +850,7 @@ tbody tr:last-child td {
   color: var(--text-2);
 }
 
-/* ─── Status pills ────────────────────────────────────────── */
+/* â”€â”€â”€ Status pills â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -707,7 +881,89 @@ tbody tr:last-child td {
   color: #15803d;
 }
 
-/* ─── Responsive ──────────────────────────────────────────── */
+/* â”€â”€â”€ Admin dashboard (analytics + agents) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.admin-analytics,
+.admin-agents {
+  padding: 24px 28px;
+}
+
+.admin-analytics-title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+@media (min-width: 768px) {
+  .admin-analytics-title {
+    font-size: 1.125rem;
+  }
+}
+
+.admin-analytics-subtitle {
+  margin: 0;
+}
+
+.admin-analytics-grid {
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  align-items: start;
+}
+
+.admin-analytics-pie-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+}
+
+.admin-analytics-pie {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.admin-analytics-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #334155;
+}
+
+.admin-analytics-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-analytics-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.admin-analytics-swatch-inline {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+@media (max-width: 960px) {
+  .admin-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* â”€â”€â”€ Responsive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 768px) {
   .navbar-inner {
     padding: 0 16px;

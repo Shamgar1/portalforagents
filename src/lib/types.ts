@@ -24,9 +24,13 @@ export type ClientRecord = {
   leadStatus: LeadStatus;
   loanAmount: number;
   expectedCommission: number;
+  /** Row insert time from Supabase (timestamptz). */
   createdAt: string;
+  /** Monday deal_creation_date column (YYYY-MM-DD), when synced. */
+  dealCreatedAt?: string | null;
   assignedAgentId: string;
   assignedAgentName?: string;
+  referringAgentText?: string;
   mondayItemId?: string;
 };
 

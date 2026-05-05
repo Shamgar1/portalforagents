@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseServerActionClient } from "@/lib/supabase/server-action";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as { email?: string; password?: string };
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = await getSupabaseServerActionClient();
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password
