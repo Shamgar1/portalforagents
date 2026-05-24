@@ -842,12 +842,56 @@ tbody tr:last-child td {
   color: var(--text);
 }
 
-.td-amount {
+/* ─── Fixed-width table layout ────────────────────────────────────────── */
+.dashboard-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* colgroup width hint for table-layout:fixed */
+col.col-amount {
+  width: 10rem;
+}
+
+/* ─── Loan-amount column (סכום הלוואה / תשלום לסוכן) ─────────────────── *
+ * !important beats any Tailwind arbitrary-variant rule ([&_th]:text-right  *
+ * etc.) regardless of @layer order, and beats the bare th/td rules below.  */
+th.loan-amount-cell,
+td.loan-amount-cell {
+  width: 10rem !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  padding-inline: 0.75rem !important;
+  box-sizing: border-box;
+}
+
+/* Inner span — explicit LTR so ₪ sign + digits render left-to-right        *
+ * regardless of the surrounding dir="rtl" on the section/table.             */
+.loan-amount-inner {
+  display: block;
+  width: 100%;
+  text-align: center;
+  direction: ltr;
+  unicode-bidi: isolate;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
-  direction: ltr;
-  text-align: left;
   color: var(--text-2);
+}
+
+/* Stack used when a currency value sits above an eligibility badge */
+.loan-amount-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* Legacy alias kept so any remaining .td-amount references still get tabular nums */
+.td-amount {
+  font-variant-numeric: tabular-nums;
 }
 
 /* â”€â”€â”€ Status pills â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */

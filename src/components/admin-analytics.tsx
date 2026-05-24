@@ -143,14 +143,21 @@ export function AdminAnalytics({ clients }: AdminAnalyticsProps) {
         </div>
 
         <div className="table-wrap">
-          <table className="admin-analytics-table">
+          <table className="admin-analytics-table dashboard-table">
+            <colgroup>
+              <col />
+              <col />
+              <col />
+              <col />
+              <col className="col-amount" />
+            </colgroup>
             <thead>
               <tr>
                 <th>סוכן מפנה</th>
                 <th>סה״כ לידים</th>
                 <th>מוצלחים</th>
                 <th>נסגרו ללא הצלחה</th>
-                <th>סה״כ עמלות (מוצלחים)</th>
+                <th className="loan-amount-cell">סה״כ עמלות (מוצלחים)</th>
               </tr>
             </thead>
             <tbody>
@@ -175,7 +182,9 @@ export function AdminAnalytics({ clients }: AdminAnalyticsProps) {
                   <td>{row.totalLeads}</td>
                   <td>{row.successful}</td>
                   <td>{row.failed}</td>
-                  <td className="td-amount">{formatCurrency(row.commission)}</td>
+                  <td className="loan-amount-cell">
+                    <span className="loan-amount-inner">{formatCurrency(row.commission)}</span>
+                  </td>
                 </tr>
               ))}
             </tbody>

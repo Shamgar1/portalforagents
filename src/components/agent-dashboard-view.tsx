@@ -18,7 +18,8 @@ type AgentDashboardViewProps = {
 const tableShell =
   "overflow-x-auto rounded-lg border border-slate-100 bg-white [&_table]:w-full [&_table]:border-collapse " +
   "[&_thead]:bg-slate-50 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-right [&_th]:text-xs [&_th]:font-semibold [&_th]:text-slate-600 md:[&_th]:text-sm " +
-  "[&_td]:px-3 [&_td]:py-3 [&_td]:align-middle [&_td]:text-right [&_td]:text-sm [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-slate-50";
+  "[&_td]:px-3 [&_td]:py-3 [&_td]:align-middle [&_td]:text-right [&_td]:text-sm " +
+  "[&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-slate-50";
 
 export function AgentDashboardView({ clients }: AgentDashboardViewProps) {
   const successfulLeads = useMemo(
@@ -93,13 +94,23 @@ export function AgentDashboardView({ clients }: AgentDashboardViewProps) {
         </div>
 
         <div className={tableShell}>
-          <table>
+          <table className="dashboard-table">
+            <colgroup>
+              <col />
+              <col />
+              <col className="col-amount" />
+              <col className="col-amount" />
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col">שם לקוח</th>
                 <th scope="col">תאריך יצירה</th>
-                <th scope="col">סכום הלוואה</th>
-                <th scope="col">תשלום לסוכן</th>
+                <th scope="col" className="loan-amount-cell">
+                  סכום הלוואה
+                </th>
+                <th scope="col" className="loan-amount-cell">
+                  תשלום לסוכן
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -117,11 +128,13 @@ export function AgentDashboardView({ clients }: AgentDashboardViewProps) {
                     {client.clientName}
                   </td>
                   <td className="text-sm text-slate-600">{formatClientDealDate(client)}</td>
-                  <td className="td-amount text-sm tabular-nums text-slate-800 md:text-base">
-                    {formatCurrency(client.loanAmount)}
+                  <td className="loan-amount-cell">
+                    <span className="loan-amount-inner">{formatCurrency(client.loanAmount)}</span>
                   </td>
-                  <td className="td-amount text-sm tabular-nums text-slate-800 md:text-base">
-                    {formatCurrency(client.expectedCommission)}
+                  <td className="loan-amount-cell">
+                    <span className="loan-amount-inner">
+                      {formatCurrency(client.expectedCommission)}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -151,13 +164,21 @@ export function AgentDashboardView({ clients }: AgentDashboardViewProps) {
         </div>
 
         <div className={tableShell}>
-          <table>
+          <table className="dashboard-table">
+            <colgroup>
+              <col />
+              <col />
+              <col />
+              <col className="col-amount" />
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col">שם לקוח</th>
                 <th scope="col">תאריך יצירה</th>
                 <th scope="col">סטטוס ליד</th>
-                <th scope="col">סכום הלוואה</th>
+                <th scope="col" className="loan-amount-cell">
+                  סכום הלוואה
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -184,8 +205,10 @@ export function AgentDashboardView({ clients }: AgentDashboardViewProps) {
                       {getLeadStatusLabel(client.leadStatus)}
                     </span>
                   </td>
-                  <td className="td-amount text-sm tabular-nums text-slate-800 md:text-base">
-                    {client.loanAmount > 0 ? formatCurrency(client.loanAmount) : "—"}
+                  <td className="loan-amount-cell">
+                    <span className="loan-amount-inner">
+                      {client.loanAmount > 0 ? formatCurrency(client.loanAmount) : "—"}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -212,13 +235,21 @@ export function AgentDashboardView({ clients }: AgentDashboardViewProps) {
         </div>
 
         <div className={tableShell}>
-          <table>
+          <table className="dashboard-table">
+            <colgroup>
+              <col />
+              <col />
+              <col />
+              <col className="col-amount" />
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col">שם לקוח</th>
                 <th scope="col">תאריך יצירה</th>
                 <th scope="col">סטטוס ליד</th>
-                <th scope="col">סכום הלוואה</th>
+                <th scope="col" className="loan-amount-cell">
+                  סכום הלוואה
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -245,8 +276,10 @@ export function AgentDashboardView({ clients }: AgentDashboardViewProps) {
                       {getLeadStatusLabel(client.leadStatus)}
                     </span>
                   </td>
-                  <td className="td-amount text-sm tabular-nums text-slate-800 md:text-base">
-                    {client.loanAmount > 0 ? formatCurrency(client.loanAmount) : "—"}
+                  <td className="loan-amount-cell">
+                    <span className="loan-amount-inner">
+                      {client.loanAmount > 0 ? formatCurrency(client.loanAmount) : "—"}
+                    </span>
                   </td>
                 </tr>
               ))}

@@ -69,14 +69,22 @@ export function DashboardTable({
       ) : null}
 
       <div className="table-wrap">
-        <table>
+        <table className="dashboard-table">
+          <colgroup>
+            <col />
+            {showAdminColumns ? <col /> : null}
+            <col />
+            <col className="col-amount" />
+            <col className="col-amount" />
+            <col />
+          </colgroup>
           <thead>
             <tr>
               <th>שם לקוח</th>
               {showAdminColumns ? <th>סוכן מפנה</th> : null}
               <th>סטטוס ליד</th>
-              <th>סכום הלוואה</th>
-              <th>תשלום לסוכן</th>
+              <th className="loan-amount-cell">סכום הלוואה</th>
+              <th className="loan-amount-cell">תשלום לסוכן</th>
               <th>תאריך יצירה</th>
             </tr>
           </thead>
@@ -116,10 +124,14 @@ export function DashboardTable({
                       {getLeadStatusLabel(client.leadStatus)}
                     </span>
                   </td>
-                  <td className="td-amount">{formatCurrency(client.loanAmount)}</td>
-                  <td>
-                    <div className="flex flex-col items-start gap-2">
-                      <span className="td-amount">{formatCurrency(client.expectedCommission)}</span>
+                  <td className="loan-amount-cell">
+                    <span className="loan-amount-inner">{formatCurrency(client.loanAmount)}</span>
+                  </td>
+                  <td className="loan-amount-cell">
+                    <div className="loan-amount-stack">
+                      <span className="loan-amount-inner">
+                        {formatCurrency(client.expectedCommission)}
+                      </span>
                       <span
                         className={`inline-flex rounded-full px-3 py-1 text-[11px] font-medium ${eligibility.className}`}
                       >
