@@ -9,6 +9,9 @@ export type MondayOpportunityUpsertRow = {
   leadStatus: string;
   loanAmount: number;
   expectedCommission: number;
+  masterPayment?: number;
+  paymentToAgentNumber?: number;
+  agentNumber?: string;
   assignedAgentId: string | null;
   referringAgentText?: string;
   /** YYYY-MM-DD from Monday deal_creation_date → public.clients.deal_created_at */
@@ -30,6 +33,9 @@ type ClientRow = {
   status: LeadStatus;
   loan_amount: number;
   expected_commission: number;
+  master_payment?: number | null;
+  payment_to_agent_number?: number | null;
+  agent_number?: string | null;
   agent_id: string | null;
   referring_agent_text: string | null;
   monday_item_id: string | null;
@@ -57,10 +63,13 @@ class SupabaseClientRepository implements ClientRepository {
         leadStatus: client.status,
         loanAmount: client.loan_amount,
         expectedCommission: client.expected_commission,
+        masterPayment: client.master_payment ?? undefined,
         assignedAgentId: client.agent_id ?? "",
         assignedAgentName:
-          user.role === "admin" ? profile?.full_name ?? undefined : undefined,
+          user.role === "admin" || user.role === "master" ? profile?.full_name ?? undefined : undefined,
         referringAgentText: client.referring_agent_text ?? undefined,
+        agentNumber: client.agent_number ?? undefined,
+        paymentToAgentNumber: client.payment_to_agent_number ?? undefined,
         mondayItemId: client.monday_item_id ?? undefined,
         createdAt: client.created_at,
         dealCreatedAt: dealCreatedAt ?? undefined,
@@ -73,6 +82,12 @@ class SupabaseClientRepository implements ClientRepository {
     user: SessionUser
   ): Promise<ClientRow[]> {
     const selectAttempts = [
+      "id, client_name, status, loan_amount, expected_commission, master_payment, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, deal_created_at, deal_creation_date, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, master_payment, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, deal_creation_date, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, master_payment, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, deal_created_at, deal_creation_date, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, deal_creation_date, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, created_at, profiles:agent_id (full_name)",
       "id, client_name, status, loan_amount, expected_commission, agent_id, referring_agent_text, monday_item_id, deal_created_at, deal_creation_date, created_at, profiles:agent_id (full_name)",
       "id, client_name, status, loan_amount, expected_commission, agent_id, referring_agent_text, monday_item_id, deal_creation_date, created_at, profiles:agent_id (full_name)",
       "id, client_name, status, loan_amount, expected_commission, agent_id, referring_agent_text, monday_item_id, created_at, profiles:agent_id (full_name)",
@@ -80,8 +95,10 @@ class SupabaseClientRepository implements ClientRepository {
 
     const runSelect = (select: string) => {
       let q = supabase.from("clients").select(select).order("created_at", { ascending: false });
-      if (user.role !== "admin") {
+      if (user.role === "agent") {
         q = q.eq("agent_id", user.id);
+      } else if (user.role === "agent_number") {
+        q = q.eq("agent_number", user.agentNumber ?? "__missing_agent_number__");
       }
       return q;
     };
@@ -95,7 +112,11 @@ class SupabaseClientRepository implements ClientRepository {
       }
       lastError = result.error.message;
       const recoverable =
-        lastError.includes("deal_created_at") || lastError.includes("deal_creation_date");
+        lastError.includes("deal_created_at") ||
+        lastError.includes("deal_creation_date") ||
+        lastError.includes("master_payment") ||
+        lastError.includes("payment_to_agent_number") ||
+        lastError.includes("agent_number");
       if (!recoverable) {
         throw new Error(lastError);
       }
@@ -142,6 +163,9 @@ class SupabaseClientRepository implements ClientRepository {
           status: row.leadStatus,
           loan_amount: row.loanAmount,
           expected_commission: row.expectedCommission,
+          master_payment: row.masterPayment ?? null,
+          payment_to_agent_number: row.paymentToAgentNumber ?? null,
+          agent_number: row.agentNumber ?? null,
           agent_id: row.assignedAgentId,
           monday_item_id: row.mondayItemId,
           source_board: row.sourceBoard,

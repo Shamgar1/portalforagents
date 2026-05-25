@@ -120,8 +120,11 @@ function resolveMondaySyncColumnIds(): string[] {
   const {
     loanAmountColumnId,
     expectedCommissionColumnId,
+    masterPaymentColumnId,
     dealCreationDateColumnId,
     referringAgentColumnId,
+    agentNumberColumnId,
+    paymentToAgentNumberColumnId,
   } = getMondayOpportunitySyncEnv();
 
   return [
@@ -131,7 +134,10 @@ function resolveMondaySyncColumnIds(): string[] {
         dealCreationDateColumnId,
         loanAmountColumnId,
         expectedCommissionColumnId,
+        masterPaymentColumnId,
         referringAgentColumnId,
+        agentNumberColumnId,
+        paymentToAgentNumberColumnId,
       ].filter((x): x is string => Boolean(x))
     ),
   ];

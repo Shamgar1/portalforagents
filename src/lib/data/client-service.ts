@@ -107,16 +107,30 @@ export function mapMondayOpportunityToSyncCandidate(
   const {
     loanAmountColumnId,
     expectedCommissionColumnId,
+    masterPaymentColumnId,
     referringAgentColumnId,
     dealCreationDateColumnId,
+    agentNumberColumnId,
+    paymentToAgentNumberColumnId,
   } = syncEnv;
 
   return {
     mondayItemId: item.id,
     clientName: item.name.trim(),
     leadStatus: getColumnText(item, DEAL_STAGE_COLUMN_ID) ?? "",
-    loanAmount: parseMoney(getColumnText(item, loanAmountColumnId)),
+    loanAmount: loanAmountColumnId
+      ? parseMoney(getColumnText(item, loanAmountColumnId))
+      : 0,
     expectedCommission: parseMoney(getColumnText(item, expectedCommissionColumnId)),
+    masterPayment: masterPaymentColumnId
+      ? parseMoney(getColumnText(item, masterPaymentColumnId))
+      : undefined,
+    agentNumber: agentNumberColumnId
+      ? getColumnDisplayText(item, agentNumberColumnId)?.trim() || undefined
+      : undefined,
+    paymentToAgentNumber: paymentToAgentNumberColumnId
+      ? parseMoney(getColumnText(item, paymentToAgentNumberColumnId))
+      : undefined,
     referringAgentText: getColumnDisplayText(item, referringAgentColumnId),
     dealCreatedAt: getColumnDateYmd(item, dealCreationDateColumnId),
     sourceBoard: "opportunities",
@@ -167,7 +181,10 @@ class DefaultClientService implements ClientService {
           env.dealCreationDateColumnId,
           env.loanAmountColumnId,
           env.expectedCommissionColumnId,
+          env.masterPaymentColumnId,
           env.referringAgentColumnId,
+          env.agentNumberColumnId,
+          env.paymentToAgentNumberColumnId,
         ].filter((x): x is string => Boolean(x))
       ),
     ];
@@ -186,6 +203,17 @@ class DefaultClientService implements ClientService {
     const lastSyncedAt = new Date().toISOString();
     const profilesByName = new Map<string, SyncProfile>();
     const sampleReferringAgents: string[] = [];
+    const sampleMasterPayments: number[] = [];
+    const sampleAgentNumberRawColumns: Array<{
+      itemId: string;
+      found: boolean;
+      columnId: string | null;
+      type: string | null;
+      text: string | null;
+      value: string | null;
+      label: string | null;
+    }> = [];
+    const sampleParsedAgentNumbers: string[] = [];
 
     const pushReferringSample = (referringAgentText: string | undefined) => {
       const t = referringAgentText?.trim();
@@ -194,6 +222,49 @@ class DefaultClientService implements ClientService {
       }
       sampleReferringAgents.push(t);
       console.log("SAMPLE REF", referringAgentText);
+    };
+
+    const pushMasterPaymentSample = (masterPayment: number | undefined) => {
+      if (
+        masterPayment == null ||
+        !Number.isFinite(masterPayment) ||
+        sampleMasterPayments.length >= 20
+      ) {
+        return;
+      }
+      sampleMasterPayments.push(masterPayment);
+    };
+
+    const clip = (value: string | null | undefined): string | null => {
+      if (value == null) {
+        return null;
+      }
+      return value.length > 200 ? `${value.slice(0, 200)}…` : value;
+    };
+
+    const pushAgentNumberDebugSamples = (
+      item: MondayOpportunityItem,
+      candidate: MondayOpportunitySyncRow
+    ) => {
+      if (env.agentNumberColumnId && sampleAgentNumberRawColumns.length < 5) {
+        const raw = item.columnValues.find(
+          (columnValue) => columnValue.id === env.agentNumberColumnId
+        );
+        sampleAgentNumberRawColumns.push({
+          itemId: item.id,
+          found: Boolean(raw),
+          columnId: raw?.id ?? null,
+          type: raw?.type ?? null,
+          text: clip(raw?.text),
+          value: clip(raw?.value),
+          label: clip(raw?.label ?? null),
+        });
+      }
+
+      const parsed = candidate.agentNumber?.trim();
+      if (parsed && sampleParsedAgentNumbers.length < 20) {
+        sampleParsedAgentNumbers.push(parsed);
+      }
     };
 
     for (const profile of profiles) {
@@ -205,6 +276,8 @@ class DefaultClientService implements ClientService {
       const candidate = mapMondayOpportunityToSyncCandidate(item, env);
 
       pushReferringSample(candidate.referringAgentText);
+      pushMasterPaymentSample(candidate.masterPayment);
+      pushAgentNumberDebugSamples(item, candidate);
 
       const normalizedAgentName = normalizePersonName(candidate.referringAgentText ?? "");
       const normalizedAgentNameCompact = normalizePersonNameCompact(
@@ -225,6 +298,9 @@ class DefaultClientService implements ClientService {
         leadStatus: candidate.leadStatus,
         loanAmount: candidate.loanAmount,
         expectedCommission: candidate.expectedCommission,
+        masterPayment: candidate.masterPayment,
+        paymentToAgentNumber: candidate.paymentToAgentNumber,
+        agentNumber: candidate.agentNumber,
         assignedAgentId: matchedProfile?.id ?? null,
         referringAgentText: candidate.referringAgentText,
         dealCreatedAt: candidate.dealCreatedAt ?? null,
@@ -234,6 +310,17 @@ class DefaultClientService implements ClientService {
     }
 
     await this.repository.upsertMondayOpportunities(upsertRows);
+
+    const sampleUpsertAgentNumbers = upsertRows
+      .slice(0, 5)
+      .map((row) => row.agentNumber ?? null);
+
+    console.log("[Monday sync] agent number debug", {
+      agentNumberColumnId: env.agentNumberColumnId ?? null,
+      rawSamples: sampleAgentNumberRawColumns,
+      parsedSamples: sampleParsedAgentNumbers,
+      upsertSamples: sampleUpsertAgentNumbers,
+    });
 
     const distinctReferringAgents = [
       ...new Set(
@@ -248,12 +335,18 @@ class DefaultClientService implements ClientService {
 
     return {
       referringAgentColumnId: env.referringAgentColumnId,
+      masterPaymentColumnId: env.masterPaymentColumnId,
+      agentNumberColumnId: env.agentNumberColumnId,
       requestedColumnIds,
       totalFetched: mondayItems.length,
       syncedCount: upsertRows.length,
       unmatchedCount: unmatchedItems.length,
       unmatchedItems,
       sampleReferringAgents,
+      sampleMasterPayments,
+      sampleAgentNumberRawColumns,
+      sampleParsedAgentNumbers,
+      sampleUpsertAgentNumbers,
       distinctReferringAgents,
       boardItemCount: fetchMeta.boardItemCount,
       pagesFetched: fetchMeta.pagesFetched,

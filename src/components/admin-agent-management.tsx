@@ -6,6 +6,8 @@ type AgentRow = {
   id: string;
   email: string;
   fullName: string;
+  role: "agent" | "agent_number";
+  agentNumber?: string;
 };
 
 export function AdminAgentManagement() {
@@ -15,6 +17,8 @@ export function AdminAgentManagement() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [role, setRole] = useState<"agent" | "agent_number">("agent");
+  const [agentNumber, setAgentNumber] = useState("");
   const [creating, setCreating] = useState(false);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
 
@@ -59,6 +63,8 @@ export function AdminAgentManagement() {
           email,
           password,
           full_name: fullName,
+          role,
+          agent_number: role === "agent_number" ? agentNumber : undefined,
         }),
       });
       const payload = (await response.json()) as { ok?: boolean; error?: string };
@@ -72,6 +78,8 @@ export function AdminAgentManagement() {
       setEmail("");
       setPassword("");
       setFullName("");
+      setRole("agent");
+      setAgentNumber("");
       await loadAgents();
     } catch {
       setCreateMessage("יצירת הסוכן נכשלה.");
@@ -84,7 +92,7 @@ export function AdminAgentManagement() {
     <section className="admin-agents card" dir="rtl">
       <h2 className="admin-analytics-title">ניהול סוכנים</h2>
       <p className="admin-analytics-subtitle text-sm text-slate-600 mb-4">
-        רשימת סוכנים (פרופיל עם תפקיד agent) ויצירת משתמש חדש ב-Supabase Auth.
+        רשימת משתמשי סוכן/מספר סוכן ויצירת משתמש חדש ב-Supabase Auth.
       </p>
 
       {error ? <p className="text-sm text-red-600 mb-4">{error}</p> : null}
@@ -95,19 +103,21 @@ export function AdminAgentManagement() {
             <tr>
               <th>שם מלא</th>
               <th>אימייל</th>
+              <th>סוג משתמש</th>
+              <th>מספר סוכן</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={2} className="table-empty">
+                <td colSpan={4} className="table-empty">
                   טוען…
                 </td>
               </tr>
             ) : null}
             {!loading && agents.length === 0 && !error ? (
               <tr>
-                <td colSpan={2} className="table-empty">
+                <td colSpan={4} className="table-empty">
                   לא נמצאו סוכנים.
                 </td>
               </tr>
@@ -118,6 +128,8 @@ export function AdminAgentManagement() {
                 <td className="text-sm text-slate-700" dir="ltr">
                   {agent.email || "—"}
                 </td>
+                <td>{agent.role === "agent_number" ? "מספר סוכן" : "סוכן"}</td>
+                <td>{agent.agentNumber || "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -136,6 +148,28 @@ export function AdminAgentManagement() {
             autoComplete="name"
           />
         </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">סוג משתמש</span>
+          <select
+            className="table-select w-full max-w-none rounded-xl"
+            value={role}
+            onChange={(event) => setRole(event.target.value as "agent" | "agent_number")}
+          >
+            <option value="agent">סוכן</option>
+            <option value="agent_number">מספר סוכן</option>
+          </select>
+        </label>
+        {role === "agent_number" ? (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-slate-700">מספר סוכן</span>
+            <input
+              className="table-select w-full max-w-none rounded-xl"
+              value={agentNumber}
+              onChange={(event) => setAgentNumber(event.target.value)}
+              required
+            />
+          </label>
+        ) : null}
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">אימייל</span>
           <input

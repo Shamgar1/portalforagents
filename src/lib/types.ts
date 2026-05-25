@@ -1,4 +1,4 @@
-export type UserRole = "agent" | "admin";
+export type UserRole = "agent" | "admin" | "master" | "agent_number";
 
 export type AppUser = {
   id: string;
@@ -6,6 +6,7 @@ export type AppUser = {
   password: string;
   name: string;
   role: UserRole;
+  agentNumber?: string;
 };
 
 export type SessionUser = Omit<AppUser, "password">;
@@ -14,6 +15,7 @@ export type UserProfile = {
   id: string;
   fullName: string;
   role: UserRole;
+  agentNumber?: string;
 };
 
 export type LeadStatus = string;
@@ -31,6 +33,9 @@ export type ClientRecord = {
   assignedAgentId: string;
   assignedAgentName?: string;
   referringAgentText?: string;
+  agentNumber?: string;
+  paymentToAgentNumber?: number;
+  masterPayment?: number;
   mondayItemId?: string;
 };
 

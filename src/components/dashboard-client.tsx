@@ -32,11 +32,26 @@ type DashboardClientProps = {
 
 type MondaySyncResponse = {
   ok: boolean;
+  masterPaymentColumnId?: string;
+  agentNumberColumnId?: string;
+  requestedColumnIds?: string[];
   totalFetched: number;
   syncedCount: number;
   unmatchedCount: number;
   unmatchedItems: unknown[];
   sampleReferringAgents?: string[];
+  sampleMasterPayments?: number[];
+  sampleAgentNumberRawColumns?: Array<{
+    itemId: string;
+    found: boolean;
+    columnId: string | null;
+    type: string | null;
+    text: string | null;
+    value: string | null;
+    label: string | null;
+  }>;
+  sampleParsedAgentNumbers?: string[];
+  sampleUpsertAgentNumbers?: Array<string | null>;
   distinctReferringAgents?: string[];
   boardItemCount?: number | null;
   pagesFetched?: number;
@@ -414,10 +429,48 @@ export function DashboardClient({ clients, canAddManualLead = false }: Dashboard
               )}
               <p>syncedCount: {syncResult.syncedCount}</p>
               <p>unmatchedCount: {syncResult.unmatchedCount}</p>
+              <p>masterPaymentColumnId: {syncResult.masterPaymentColumnId ?? "—"}</p>
+              <p>agentNumberColumnId: {syncResult.agentNumberColumnId ?? "—"}</p>
+              {syncResult.requestedColumnIds && syncResult.requestedColumnIds.length > 0 ? (
+                <p className="text-xs break-all">
+                  requestedColumnIds: {syncResult.requestedColumnIds.join(", ")}
+                </p>
+              ) : null}
+              {syncResult.sampleParsedAgentNumbers &&
+              syncResult.sampleParsedAgentNumbers.length > 0 ? (
+                <p>
+                  sampleParsedAgentNumbers: {syncResult.sampleParsedAgentNumbers.join(" · ")}
+                </p>
+              ) : null}
+              {syncResult.sampleUpsertAgentNumbers &&
+              syncResult.sampleUpsertAgentNumbers.length > 0 ? (
+                <p>
+                  sampleUpsertAgentNumbers:{" "}
+                  {syncResult.sampleUpsertAgentNumbers
+                    .map((value) => value ?? "null")
+                    .join(" · ")}
+                </p>
+              ) : null}
+              {syncResult.sampleAgentNumberRawColumns &&
+              syncResult.sampleAgentNumberRawColumns.length > 0 ? (
+                <details className="mt-2">
+                  <summary className="cursor-pointer select-none font-medium text-slate-700">
+                    sampleAgentNumberRawColumns ({syncResult.sampleAgentNumberRawColumns.length})
+                  </summary>
+                  <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs">
+                    {JSON.stringify(syncResult.sampleAgentNumberRawColumns, null, 2)}
+                  </pre>
+                </details>
+              ) : null}
               {syncResult.distinctReferringAgents && syncResult.distinctReferringAgents.length > 0 ? (
                 <p className="text-xs">
                   distinctReferringAgents ({syncResult.distinctReferringAgents.length}):{" "}
                   {syncResult.distinctReferringAgents.join(" · ")}
+                </p>
+              ) : null}
+              {syncResult.sampleMasterPayments && syncResult.sampleMasterPayments.length > 0 ? (
+                <p>
+                  sampleMasterPayments: {syncResult.sampleMasterPayments.join(" · ")}
                 </p>
               ) : null}
               {syncResult.sampleReferringAgents && syncResult.sampleReferringAgents.length > 0 ? (

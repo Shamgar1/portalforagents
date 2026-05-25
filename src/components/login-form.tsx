@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 
 type LoginState = {
   error: string | null;
@@ -9,8 +8,16 @@ type LoginState = {
 };
 
 export function LoginForm() {
-  const router = useRouter();
   const [state, setState] = useState<LoginState>({ error: null, loading: false });
+
+  async function parseErrorMessage(response: Response, fallback: string): Promise<string> {
+    try {
+      const payload = (await response.json()) as { error?: string };
+      return payload.error ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -21,20 +28,44 @@ export function LoginForm() {
 
     setState({ error: null, loading: true });
 
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+        body: JSON.stringify({ email, password })
+      });
 
-    if (!response.ok) {
-      const payload = (await response.json()) as { error?: string };
-      setState({ error: payload.error ?? "אימייל או סיסמה שגויים.", loading: false });
-      return;
+      if (!response.ok) {
+        const message = await parseErrorMessage(response, "אימייל או סיסמה שגויים.");
+        setState({ error: message, loading: false });
+        return;
+      }
+
+      const sessionResponse = await fetch("/api/auth/session", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store"
+      });
+
+      if (!sessionResponse.ok) {
+        const message = await parseErrorMessage(
+          sessionResponse,
+          "התחברת בהצלחה, אבל לא נפתחה סשן פעילה. נסו לרענן ולהתחבר שוב."
+        );
+        setState({ error: message, loading: false });
+        return;
+      }
+
+      // Hard navigation avoids stale client router state right after auth cookie writes.
+      window.location.assign("/dashboard");
+    } catch {
+      setState({
+        error: "שגיאת תקשורת בעת התחברות. בדקו חיבור ונסו שוב.",
+        loading: false
+      });
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (

@@ -56,6 +56,9 @@ export type MondayOpportunitySyncRow = {
   leadStatus: string;
   loanAmount: number;
   expectedCommission: number;
+  masterPayment?: number;
+  agentNumber?: string;
+  paymentToAgentNumber?: number;
   referringAgentText?: string;
   /** YYYY-MM-DD from Monday column deal_creation_date when present. */
   dealCreatedAt?: string;
@@ -65,6 +68,10 @@ export type MondayOpportunitySyncRow = {
 export type MondayOpportunitySyncResult = {
   /** Resolved `MONDAY_REFERRING_AGENT_COLUMN_ID` for this sync (strict env). */
   referringAgentColumnId: string;
+  /** Optional `MONDAY_MASTER_PAYMENT_COLUMN_ID` used for master payment mapping. */
+  masterPaymentColumnId?: string;
+  /** Optional `MONDAY_AGENT_NUMBER_COLUMN_ID` used for agent number mapping. */
+  agentNumberColumnId?: string;
   requestedColumnIds: string[];
   totalFetched: number;
   syncedCount: number;
@@ -72,6 +79,22 @@ export type MondayOpportunitySyncResult = {
   unmatchedItems: MondayOpportunitySyncRow[];
   /** First 20 non-empty `referring_agent_text` values encountered in fetch order. */
   sampleReferringAgents: string[];
+  /** First 20 non-empty `master_payment` values mapped from Monday. */
+  sampleMasterPayments: number[];
+  /** Up to 5 raw Monday column payload samples for agent number column id. */
+  sampleAgentNumberRawColumns: Array<{
+    itemId: string;
+    found: boolean;
+    columnId: string | null;
+    type: string | null;
+    text: string | null;
+    value: string | null;
+    label: string | null;
+  }>;
+  /** First 20 non-empty parsed agent-number values from Monday. */
+  sampleParsedAgentNumbers: string[];
+  /** First 5 upsert payload values for `agent_number`. */
+  sampleUpsertAgentNumbers: Array<string | null>;
   /** Unique non-empty labels from `MONDAY_REFERRING_AGENT_COLUMN_ID` this sync (e.g. color column). */
   distinctReferringAgents: string[];
   /** Items on the Monday board (from `boards.items_count`), when returned. */

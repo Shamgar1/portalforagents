@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 
+type ManagedUserRole = "agent" | "agent_number";
+
 export async function GET() {
   const user = await getSessionUser();
 
@@ -14,8 +16,8 @@ export async function GET() {
     const admin = getSupabaseServiceRoleClient();
     const { data: profiles, error: profilesError } = await admin
       .from("profiles")
-      .select("id, full_name")
-      .eq("role", "agent")
+      .select("id, full_name, role, agent_number")
+      .in("role", ["agent", "agent_number"])
       .order("full_name", { ascending: true });
 
     if (profilesError) {
@@ -41,6 +43,8 @@ export async function GET() {
           id: authUser.id,
           email: authUser.email ?? "",
           fullName: profile?.full_name ?? "",
+          role: (profile?.role ?? "agent") as ManagedUserRole,
+          agentNumber: profile?.agent_number ?? "",
         };
       })
       .sort((left, right) => left.fullName.localeCompare(right.fullName, "he"));
@@ -71,11 +75,15 @@ export async function POST(request: Request) {
     email?: string;
     password?: string;
     full_name?: string;
+    role?: ManagedUserRole;
+    agent_number?: string;
   };
 
   const email = body.email?.trim().toLowerCase() ?? "";
   const password = body.password?.trim() ?? "";
   const fullName = body.full_name?.trim() ?? "";
+  const role: ManagedUserRole = body.role === "agent_number" ? "agent_number" : "agent";
+  const agentNumber = body.agent_number?.trim() ?? "";
 
   if (!email || !password || !fullName) {
     return NextResponse.json({ error: "יש למלא אימייל, סיסמה ושם מלא." }, { status: 400 });
@@ -84,6 +92,9 @@ export async function POST(request: Request) {
   if (password.length < 6) {
     return NextResponse.json({ error: "הסיסמה חייבת להכיל לפחות 6 תווים." }, { status: 400 });
   }
+  if (role === "agent_number" && !agentNumber) {
+    return NextResponse.json({ error: "יש להזין מספר סוכן עבור משתמש מסוג מספר סוכן." }, { status: 400 });
+  }
 
   try {
     const admin = getSupabaseServiceRoleClient();
@@ -91,6 +102,11 @@ export async function POST(request: Request) {
       email,
       password,
       email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        role,
+        agent_number: role === "agent_number" ? agentNumber : null,
+      },
     });
 
     if (createError || !created.user) {
@@ -104,7 +120,8 @@ export async function POST(request: Request) {
       {
         id: created.user.id,
         full_name: fullName,
-        role: "agent",
+        role,
+        agent_number: role === "agent_number" ? agentNumber : null,
       },
       { onConflict: "id" }
     );

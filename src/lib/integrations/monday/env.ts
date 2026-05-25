@@ -7,10 +7,13 @@ export type MondayOpportunitySyncEnv = {
   apiToken: string;
   boardId: string;
   apiUrl: string;
-  loanAmountColumnId: string;
+  loanAmountColumnId?: string;
   expectedCommissionColumnId: string;
+  masterPaymentColumnId?: string;
   referringAgentColumnId: string;
   dealCreationDateColumnId: string;
+  agentNumberColumnId?: string;
+  paymentToAgentNumberColumnId?: string;
 };
 
 function shellOverrideHint(keys: string[]): string {
@@ -28,10 +31,16 @@ export function getMondayEnv() {
   const loanAmountColumnId = process.env.MONDAY_LOAN_AMOUNT_COLUMN_ID?.trim();
   const expectedCommissionColumnId =
     process.env.MONDAY_EXPECTED_COMMISSION_COLUMN_ID?.trim();
+  const masterPaymentColumnId =
+    process.env.MONDAY_MASTER_PAYMENT_COLUMN_ID?.trim();
   const referringAgentColumnId =
     process.env.MONDAY_REFERRING_AGENT_COLUMN_ID?.trim();
   const dealCreationDateColumnId =
     process.env.MONDAY_DEAL_CREATION_DATE_COLUMN_ID?.trim();
+  const agentNumberColumnId =
+    process.env.MONDAY_AGENT_NUMBER_COLUMN_ID?.trim();
+  const paymentToAgentNumberColumnId =
+    process.env.MONDAY_PAYMENT_TO_AGENT_NUMBER_COLUMN_ID?.trim();
 
   if (!apiToken || !boardId) {
     throw new Error("Monday opportunities board environment variables are missing.");
@@ -43,8 +52,11 @@ export function getMondayEnv() {
     apiUrl,
     loanAmountColumnId,
     expectedCommissionColumnId,
+    masterPaymentColumnId,
     referringAgentColumnId,
     dealCreationDateColumnId,
+    agentNumberColumnId,
+    paymentToAgentNumberColumnId,
   };
 }
 
@@ -61,9 +73,8 @@ export function getMondayOpportunitySyncEnv(): MondayOpportunitySyncEnv {
   const dealCreationDateColumnId =
     base.dealCreationDateColumnId?.trim() || "deal_creation_date";
 
-  if (!loanAmountColumnId || !expectedCommissionColumnId || !referringAgentColumnId) {
+  if (!expectedCommissionColumnId || !referringAgentColumnId) {
     const missing: string[] = [];
-    if (!loanAmountColumnId) missing.push("MONDAY_LOAN_AMOUNT_COLUMN_ID");
     if (!expectedCommissionColumnId) missing.push("MONDAY_EXPECTED_COMMISSION_COLUMN_ID");
     if (!referringAgentColumnId) missing.push("MONDAY_REFERRING_AGENT_COLUMN_ID");
     throw new Error(
@@ -77,8 +88,11 @@ export function getMondayOpportunitySyncEnv(): MondayOpportunitySyncEnv {
     apiUrl: base.apiUrl,
     loanAmountColumnId,
     expectedCommissionColumnId,
+    masterPaymentColumnId: base.masterPaymentColumnId,
     referringAgentColumnId,
     dealCreationDateColumnId,
+    agentNumberColumnId: base.agentNumberColumnId,
+    paymentToAgentNumberColumnId: base.paymentToAgentNumberColumnId,
   };
 }
 
@@ -92,7 +106,6 @@ export function isMondayOpportunitySyncConfigured() {
   return Boolean(
     process.env.MONDAY_API_TOKEN &&
       process.env.MONDAY_OPPORTUNITIES_BOARD_ID &&
-      process.env.MONDAY_LOAN_AMOUNT_COLUMN_ID &&
       process.env.MONDAY_EXPECTED_COMMISSION_COLUMN_ID &&
       process.env.MONDAY_REFERRING_AGENT_COLUMN_ID
   );
