@@ -7,6 +7,23 @@ type ManagedUserRole = "agent" | "agent_number";
 
 export async function GET() {
   const user = await getSessionUser();
+  const runId = `admin-agents-${Date.now()}`;
+
+  // #region agent log
+  fetch("http://127.0.0.1:7688/ingest/5b2db142-bc66-47ee-9ece-7f1ff1413cd7", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ad0d91" },
+    body: JSON.stringify({
+      sessionId: "ad0d91",
+      runId,
+      hypothesisId: "H1",
+      location: "src/app/api/admin/agents/route.ts:GET:start",
+      message: "admin agents GET start",
+      data: { hasUser: Boolean(user), role: user?.role ?? null },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
@@ -21,6 +38,21 @@ export async function GET() {
       .order("full_name", { ascending: true });
 
     if (profilesError) {
+      // #region agent log
+      fetch("http://127.0.0.1:7688/ingest/5b2db142-bc66-47ee-9ece-7f1ff1413cd7", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ad0d91" },
+        body: JSON.stringify({
+          sessionId: "ad0d91",
+          runId,
+          hypothesisId: "H2",
+          location: "src/app/api/admin/agents/route.ts:GET:profilesError",
+          message: "profiles query failed",
+          data: { message: profilesError.message, code: profilesError.code ?? null },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       return NextResponse.json({ error: profilesError.message }, { status: 502 });
     }
 
@@ -31,6 +63,21 @@ export async function GET() {
     });
 
     if (listError) {
+      // #region agent log
+      fetch("http://127.0.0.1:7688/ingest/5b2db142-bc66-47ee-9ece-7f1ff1413cd7", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ad0d91" },
+        body: JSON.stringify({
+          sessionId: "ad0d91",
+          runId,
+          hypothesisId: "H3",
+          location: "src/app/api/admin/agents/route.ts:GET:listUsersError",
+          message: "auth.admin.listUsers failed",
+          data: { message: listError.message, status: listError.status ?? null },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       return NextResponse.json({ error: listError.message }, { status: 502 });
     }
 
@@ -52,6 +99,22 @@ export async function GET() {
     return NextResponse.json({ agents });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load agents.";
+
+    // #region agent log
+    fetch("http://127.0.0.1:7688/ingest/5b2db142-bc66-47ee-9ece-7f1ff1413cd7", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ad0d91" },
+      body: JSON.stringify({
+        sessionId: "ad0d91",
+        runId,
+        hypothesisId: "H4",
+        location: "src/app/api/admin/agents/route.ts:GET:catch",
+        message: "admin agents GET exception",
+        data: { message },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     if (message.includes("SUPABASE_SERVICE_ROLE_KEY")) {
       return NextResponse.json(

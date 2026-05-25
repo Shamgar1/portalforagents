@@ -47,14 +47,14 @@ export async function getSessionUser() {
       return null;
     }
 
-    let profile:
-      | {
-          id: string;
-          full_name: string;
-          role: "agent" | "admin" | "master" | "agent_number";
-          agent_number?: string | null;
-        }
-      | null = null;
+    type Profile = {
+      id: string;
+      full_name: string;
+      role: "agent" | "admin" | "master" | "agent_number";
+      agent_number?: string | null;
+    };
+
+    let profile: Profile | null = null;
     let profileError:
       | {
           message: string;
@@ -70,7 +70,7 @@ export async function getSessionUser() {
       .eq("id", user.id)
       .single();
 
-    profile = (withAgentNumber.data as typeof profile) ?? null;
+    profile = (withAgentNumber.data as Profile | null) ?? null;
     profileError = withAgentNumber.error
       ? {
           message: withAgentNumber.error.message,
@@ -102,12 +102,17 @@ export async function getSessionUser() {
 
       const fallback = await supabase
         .from("profiles")
-        .select("id, full_name, role")
+        .select("id, full_name, role, agent_number")
         .eq("id", user.id)
         .single();
 
       profile = fallback.data
-        ? { ...(fallback.data as Omit<NonNullable<typeof profile>, "agent_number">), agent_number: null }
+        ? {
+            id: fallback.data.id,
+            full_name: fallback.data.full_name,
+            role: fallback.data.role,
+            agent_number: fallback.data.agent_number ?? null,
+          }
         : null;
       profileError = fallback.error
         ? {
@@ -174,9 +179,13 @@ export async function getSessionUser() {
     }).catch(() => {});
     // #endregion
 
-    console.warn("[auth] getSessionUser unexpected failure", {
-      error: error instanceof Error ? error.message : String(error)
-    });
+    const message = error instanceof Error ? error.message : String(error);
+    const isExpectedDynamicBuildError = message.includes("Dynamic server usage:");
+    if (!isExpectedDynamicBuildError) {
+      console.warn("[auth] getSessionUser unexpected failure", {
+        error: message
+      });
+    }
     return null;
   }
 }

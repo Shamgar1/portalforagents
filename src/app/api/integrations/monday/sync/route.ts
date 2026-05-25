@@ -6,6 +6,23 @@ import { isMondayOpportunitySyncConfigured } from "@/lib/integrations/monday/env
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
+  const runId = `monday-sync-route-${Date.now()}`;
+
+  // #region agent log
+  fetch("http://127.0.0.1:7688/ingest/5b2db142-bc66-47ee-9ece-7f1ff1413cd7", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ad0d91" },
+    body: JSON.stringify({
+      sessionId: "ad0d91",
+      runId,
+      hypothesisId: "H5",
+      location: "src/app/api/integrations/monday/sync/route.ts:POST:start",
+      message: "monday sync route start",
+      data: { hasUser: Boolean(user), role: user?.role ?? null },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   if (!user) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
@@ -19,6 +36,21 @@ export async function POST(request: Request) {
   }
 
   if (!isMondayOpportunitySyncConfigured()) {
+    // #region agent log
+    fetch("http://127.0.0.1:7688/ingest/5b2db142-bc66-47ee-9ece-7f1ff1413cd7", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ad0d91" },
+      body: JSON.stringify({
+        sessionId: "ad0d91",
+        runId,
+        hypothesisId: "H6",
+        location: "src/app/api/integrations/monday/sync/route.ts:POST:config",
+        message: "monday sync not configured",
+        data: { configured: false },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return NextResponse.json(
       {
         error:
@@ -69,6 +101,21 @@ export async function POST(request: Request) {
       totalClientsInDatabaseAfterSync: result.totalClientsInDatabaseAfterSync,
     });
   } catch (error) {
+    // #region agent log
+    fetch("http://127.0.0.1:7688/ingest/5b2db142-bc66-47ee-9ece-7f1ff1413cd7", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ad0d91" },
+      body: JSON.stringify({
+        sessionId: "ad0d91",
+        runId,
+        hypothesisId: "H7",
+        location: "src/app/api/integrations/monday/sync/route.ts:POST:catch",
+        message: "monday sync route caught error",
+        data: { message: error instanceof Error ? error.message : "unknown error" },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return NextResponse.json(
       {
         error:
