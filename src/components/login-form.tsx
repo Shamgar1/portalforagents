@@ -43,21 +43,6 @@ export function LoginForm() {
         return;
       }
 
-      const sessionResponse = await fetch("/api/auth/session", {
-        method: "GET",
-        credentials: "same-origin",
-        cache: "no-store"
-      });
-
-      if (!sessionResponse.ok) {
-        const message = await parseErrorMessage(
-          sessionResponse,
-          "התחברת בהצלחה, אבל לא נפתחה סשן פעילה. נסו לרענן ולהתחבר שוב."
-        );
-        setState({ error: message, loading: false });
-        return;
-      }
-
       // Hard navigation avoids stale client router state right after auth cookie writes.
       window.location.assign("/dashboard");
     } catch {

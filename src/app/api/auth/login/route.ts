@@ -35,6 +35,8 @@ export async function POST(request: Request) {
       password
     });
 
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
     // #region agent log
     fetch("http://127.0.0.1:7688/ingest/5b2db142-bc66-47ee-9ece-7f1ff1413cd7", {
       method: "POST",
@@ -50,7 +52,9 @@ export async function POST(request: Request) {
           errorMessage: error?.message ?? null,
           hasSession: Boolean(data.session),
           hasUser: Boolean(data.user),
-          userId: data.user?.id ?? null
+          userId: data.user?.id ?? null,
+          getSessionHasSession: Boolean(sessionData.session),
+          getSessionError: sessionError?.message ?? null
         },
         timestamp: Date.now()
       })
@@ -68,6 +72,26 @@ export async function POST(request: Request) {
       });
       return NextResponse.json(
         { error: "התחברות נכשלה: לא נוצרה סשן. נסו שוב." },
+        { status: 502 }
+      );
+    }
+
+    if (!sessionData.session || sessionError) {
+      const devDebug =
+        process.env.NODE_ENV !== "production"
+          ? {
+              debug: {
+                signInHasSession: Boolean(data.session),
+                getSessionHasSession: Boolean(sessionData.session),
+                getSessionError: sessionError?.message ?? null,
+              },
+            }
+          : undefined;
+      return NextResponse.json(
+        {
+          error: "התחברות בוצעה אבל סשן לא נשמרה בשרת.",
+          ...devDebug,
+        },
         { status: 502 }
       );
     }
