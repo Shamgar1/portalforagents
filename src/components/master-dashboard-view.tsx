@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { formatCurrency } from "@/lib/dashboard/formatters";
+import { dealOrRecordTimeMs, formatCurrency } from "@/lib/dashboard/formatters";
 import {
   isFailedLeadStatusContaining,
   isInProgressLeadStatus,
@@ -13,66 +13,139 @@ import type { ClientRecord } from "@/lib/types";
 
 type MasterDashboardViewProps = {
   clients: ClientRecord[];
-  role: "master";
 };
 
-type StatusBucket = "all" | "successful" | "in_progress" | "failed";
-type SortBy = "agent_number_asc" | "agent_number_desc";
-
-function byStatusBucket(clients: ClientRecord[], bucket: StatusBucket): ClientRecord[] {
-  if (bucket === "successful") {
-    return clients.filter((client) => isSuccessfulLeadStatus(client.leadStatus));
-  }
-  if (bucket === "failed") {
-    return clients.filter((client) => isFailedLeadStatusContaining(client.leadStatus));
-  }
-  if (bucket === "in_progress") {
-    return clients.filter((client) => isInProgressLeadStatus(client.leadStatus));
-  }
-  return clients;
-}
+type MonthFilter = "all" | "current" | "previous";
 
 function normalizeAgentNumber(value: string | undefined): string {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : "ללא מספר סוכן";
 }
 
-export function MasterDashboardView({ clients, role }: MasterDashboardViewProps) {
-  const [statusBucket, setStatusBucket] = useState<StatusBucket>("all");
+function monthKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+function previousMonthKey(date: Date): string {
+  const d = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+  return monthKey(d);
+}
+
+function clientDate(client: ClientRecord): Date | null {
+  const ms = dealOrRecordTimeMs(client.dealCreatedAt, client.createdAt);
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const d = new Date(ms);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+type SectionStats = {
+  count: number;
+  totalMasterPayment: number;
+  totalAgentNumberPayment: number;
+};
+
+function sectionStats(rows: ClientRecord[]): SectionStats {
+  return rows.reduce(
+    (acc, row) => {
+      acc.count += 1;
+      acc.totalMasterPayment += row.masterPayment ?? 0;
+      acc.totalAgentNumberPayment += row.paymentToAgentNumber ?? 0;
+      return acc;
+    },
+    { count: 0, totalMasterPayment: 0, totalAgentNumberPayment: 0 }
+  );
+}
+
+type LeadSectionProps = {
+  title: string;
+  rows: ClientRecord[];
+};
+
+function LeadSection({ title, rows }: LeadSectionProps) {
+  const stats = useMemo(() => sectionStats(rows), [rows]);
+
+  return (
+    <section className="card p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h3 className="admin-analytics-title">{title}</h3>
+          <p className="admin-analytics-subtitle text-sm text-slate-600">
+            כמות לידים: <strong>{stats.count}</strong>
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <span className="table-count-badge">
+            תשלום למאסטר: {formatCurrency(stats.totalMasterPayment)}
+          </span>
+          <span className="table-count-badge">
+            תשלום למספר סוכן: {formatCurrency(stats.totalAgentNumberPayment)}
+          </span>
+        </div>
+      </div>
+
+      <div className="table-wrap">
+        <table className="dashboard-table">
+          <thead>
+            <tr>
+              <th>שם לקוח</th>
+              <th>סוכן מפנה</th>
+              <th>מספר סוכן</th>
+              <th className="loan-amount-cell">תשלום למאסטר</th>
+              <th className="loan-amount-cell">תשלום למספר סוכן</th>
+              <th>סטטוס</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td className="table-empty" colSpan={6}>
+                  אין נתונים להצגה.
+                </td>
+              </tr>
+            ) : null}
+            {rows.map((client) => (
+              <tr key={client.id}>
+                <td className="td-name">{client.clientName}</td>
+                <td>{client.referringAgentText?.trim() || "—"}</td>
+                <td>{normalizeAgentNumber(client.agentNumber)}</td>
+                <td className="loan-amount-cell">
+                  <span className="loan-amount-inner">
+                    {formatCurrency(client.masterPayment ?? 0)}
+                  </span>
+                </td>
+                <td className="loan-amount-cell">
+                  <span className="loan-amount-inner">
+                    {formatCurrency(client.paymentToAgentNumber ?? 0)}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getLeadStatusBadgeClass(
+                      client.leadStatus
+                    )}`}
+                  >
+                    {getLeadStatusLabel(client.leadStatus)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
   const [selectedAgentNumber, setSelectedAgentNumber] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<SortBy>("agent_number_asc");
+  const [selectedMonth, setSelectedMonth] = useState<MonthFilter>("all");
 
   const clientsWithAgentNumber = useMemo(
     () => clients.filter((client) => Boolean(client.agentNumber?.trim())),
     [clients]
   );
-
-  const overallSummary = useMemo(() => {
-    return clientsWithAgentNumber.reduce(
-      (acc, client) => {
-        acc.totalLeads += 1;
-        acc.totalAgentCommission += client.masterPayment ?? 0;
-        acc.totalAgentNumberPayment += client.paymentToAgentNumber ?? 0;
-
-        if (isSuccessfulLeadStatus(client.leadStatus)) {
-          acc.successful += 1;
-        } else if (isFailedLeadStatusContaining(client.leadStatus)) {
-          acc.failed += 1;
-        } else {
-          acc.inProgress += 1;
-        }
-        return acc;
-      },
-      {
-        totalLeads: 0,
-        successful: 0,
-        failed: 0,
-        inProgress: 0,
-        totalAgentCommission: 0,
-        totalAgentNumberPayment: 0,
-      }
-    );
-  }, [clientsWithAgentNumber]);
 
   const distinctAgentNumbers = useMemo(
     () =>
@@ -86,89 +159,75 @@ export function MasterDashboardView({ clients, role }: MasterDashboardViewProps)
     [clientsWithAgentNumber]
   );
 
-  const availableAgentNumbers = useMemo(() => {
-    return distinctAgentNumbers;
-  }, [distinctAgentNumbers]);
-
-  const visibleClients = useMemo(() => {
-    const statusFiltered = byStatusBucket(clientsWithAgentNumber, statusBucket);
-    const numberFiltered =
+  const filteredClients = useMemo(() => {
+    const byAgent =
       selectedAgentNumber === "all"
-        ? statusFiltered
-        : statusFiltered.filter(
+        ? clientsWithAgentNumber
+        : clientsWithAgentNumber.filter(
             (client) => client.agentNumber?.trim() === selectedAgentNumber
           );
 
-    return [...numberFiltered].sort((left, right) => {
+    const now = new Date();
+    const current = monthKey(now);
+    const previous = previousMonthKey(now);
+
+    const byMonth =
+      selectedMonth === "all"
+        ? byAgent
+        : byAgent.filter((client) => {
+            const d = clientDate(client);
+            if (!d) return false;
+            const key = monthKey(d);
+            return selectedMonth === "current" ? key === current : key === previous;
+          });
+
+    return [...byMonth].sort((left, right) => {
       const leftNumber = normalizeAgentNumber(left.agentNumber);
       const rightNumber = normalizeAgentNumber(right.agentNumber);
-      const comparison = leftNumber.localeCompare(rightNumber, "he", { numeric: true });
-      return sortBy === "agent_number_asc" ? comparison : -comparison;
+      return leftNumber.localeCompare(rightNumber, "he", { numeric: true });
     });
-  }, [clientsWithAgentNumber, selectedAgentNumber, sortBy, statusBucket]);
+  }, [clientsWithAgentNumber, selectedAgentNumber, selectedMonth]);
 
-  const groupedByAgentNumber = useMemo(() => {
-    const map = new Map<
-      string,
-      { leads: number; successful: number; inProgress: number; failed: number; paymentToAgentNumber: number }
-    >();
-
-    for (const client of byStatusBucket(clientsWithAgentNumber, statusBucket)) {
-      const key = normalizeAgentNumber(client.agentNumber);
-      const existing = map.get(key) ?? {
-        leads: 0,
+  const overallSummary = useMemo(() => {
+    return filteredClients.reduce(
+      (acc, client) => {
+        acc.totalLeads += 1;
+        acc.totalMasterPayment += client.masterPayment ?? 0;
+        acc.totalAgentNumberPayment += client.paymentToAgentNumber ?? 0;
+        if (isSuccessfulLeadStatus(client.leadStatus)) acc.successful += 1;
+        else if (isFailedLeadStatusContaining(client.leadStatus)) acc.failed += 1;
+        else if (isInProgressLeadStatus(client.leadStatus)) acc.inProgress += 1;
+        return acc;
+      },
+      {
+        totalLeads: 0,
         successful: 0,
         inProgress: 0,
         failed: 0,
-        paymentToAgentNumber: 0,
-      };
-      existing.leads += 1;
-      existing.paymentToAgentNumber += client.paymentToAgentNumber ?? 0;
-      if (isSuccessfulLeadStatus(client.leadStatus)) existing.successful += 1;
-      else if (isFailedLeadStatusContaining(client.leadStatus)) existing.failed += 1;
-      else existing.inProgress += 1;
-      map.set(key, existing);
-    }
+        totalMasterPayment: 0,
+        totalAgentNumberPayment: 0,
+      }
+    );
+  }, [filteredClients]);
 
-    return Array.from(map.entries())
-      .map(([agentNumber, totals]) => ({ agentNumber, ...totals }))
-      .sort((left, right) =>
-        left.agentNumber.localeCompare(right.agentNumber, "he", { numeric: true })
-      );
-  }, [clientsWithAgentNumber, statusBucket]);
+  const successfulRows = useMemo(
+    () => filteredClients.filter((client) => isSuccessfulLeadStatus(client.leadStatus)),
+    [filteredClients]
+  );
+  const inProgressRows = useMemo(
+    () => filteredClients.filter((client) => isInProgressLeadStatus(client.leadStatus)),
+    [filteredClients]
+  );
+  const failedRows = useMemo(
+    () => filteredClients.filter((client) => isFailedLeadStatusContaining(client.leadStatus)),
+    [filteredClients]
+  );
 
   return (
     <section className="grid gap-6 max-w-6xl mx-auto w-full" dir="rtl">
       <section className="stats-row">
-        <article className="card stat-card">
-          <p className="stat-label">Debug: role</p>
-          <p className="stat-value">{role}</p>
-          <p className="stat-sub">role שהקומפוננטה קיבלה מהשרת</p>
-        </article>
-        <article className="card stat-card">
-          <p className="stat-label">Debug: שורות נטענו</p>
-          <p className="stat-value">{clients.length}</p>
-          <p className="stat-sub">שורות כולל הכל מהשרת למאסטר</p>
-        </article>
-        <article className="card stat-card">
-          <p className="stat-label">Debug: עם מספר סוכן</p>
-          <p className="stat-value">{clientsWithAgentNumber.length}</p>
-          <p className="stat-sub">agent_number לא ריק / לא null</p>
-        </article>
-        <article className="card stat-card">
-          <p className="stat-label">Debug: מספרים ייחודיים</p>
-          <p className="stat-value">{distinctAgentNumbers.length}</p>
-          <p className="stat-sub">
-            {distinctAgentNumbers.length > 0 ? distinctAgentNumbers.join(" · ") : "אין מספרים"}
-          </p>
-        </article>
-        <article className="card stat-card">
-          <p className="stat-label">Debug: פילטר נבחר</p>
-          <p className="stat-value">{selectedAgentNumber === "all" ? "all" : selectedAgentNumber}</p>
-          <p className="stat-sub">כלומר מה מוצג כרגע בטבלה</p>
-        </article>
         <article className="card stat-card stat-card--indigo">
-          <p className="stat-label">סה"כ לידים (כל הסוכנים)</p>
+          <p className="stat-label">סה״כ לידים</p>
           <p className="stat-value">{overallSummary.totalLeads}</p>
         </article>
         <article className="card stat-card stat-card--emerald">
@@ -180,13 +239,13 @@ export function MasterDashboardView({ clients, role }: MasterDashboardViewProps)
           <p className="stat-value">{overallSummary.inProgress}</p>
         </article>
         <article className="card stat-card stat-card--rose">
-          <p className="stat-label">לידים ללא הצלחה</p>
+          <p className="stat-label">לידים נסגרו ללא הצלחה</p>
           <p className="stat-value">{overallSummary.failed}</p>
         </article>
         <article className="card stat-card stat-card--violet">
           <p className="stat-label">סה"כ תשלום למאסטר</p>
           <p className="stat-value stat-value-compact">
-            {formatCurrency(overallSummary.totalAgentCommission)}
+            {formatCurrency(overallSummary.totalMasterPayment)}
           </p>
         </article>
         <article className="card stat-card stat-card--indigo">
@@ -200,18 +259,7 @@ export function MasterDashboardView({ clients, role }: MasterDashboardViewProps)
       <section className="table-card">
         <div className="table-card-toolbar table-card-toolbar--compact">
           <div className="table-card-controls">
-            <span className="table-count-badge">{visibleClients.length} רשומות</span>
-            <select
-              className="table-select"
-              value={statusBucket}
-              onChange={(event) => setStatusBucket(event.target.value as StatusBucket)}
-              aria-label="סינון לפי סטטוס"
-            >
-              <option value="all">כל הסטטוסים</option>
-              <option value="successful">לידים מוצלחים</option>
-              <option value="in_progress">לידים בתהליך</option>
-              <option value="failed">לידים ללא הצלחה</option>
-            </select>
+            <span className="table-count-badge">{filteredClients.length} רשומות</span>
             <select
               className="table-select"
               value={selectedAgentNumber}
@@ -219,7 +267,7 @@ export function MasterDashboardView({ clients, role }: MasterDashboardViewProps)
               aria-label="סינון לפי מספר סוכן"
             >
               <option value="all">כל מספרי הסוכן</option>
-              {availableAgentNumbers.map((agentNumber) => (
+              {distinctAgentNumbers.map((agentNumber) => (
                 <option key={agentNumber} value={agentNumber}>
                   {agentNumber}
                 </option>
@@ -227,111 +275,25 @@ export function MasterDashboardView({ clients, role }: MasterDashboardViewProps)
             </select>
             <select
               className="table-select"
-              value={sortBy}
-              onChange={(event) => setSortBy(event.target.value as SortBy)}
-              aria-label="מיון לפי מספר סוכן"
+              value={selectedMonth}
+              onChange={(event) => setSelectedMonth(event.target.value as MonthFilter)}
+              aria-label="סינון לפי חודש"
             >
-              <option value="agent_number_asc">מיון מספר סוכן: מהנמוך לגבוה</option>
-              <option value="agent_number_desc">מיון מספר סוכן: מהגבוה לנמוך</option>
+              <option value="current">חודש נוכחי</option>
+              <option value="previous">חודש קודם</option>
+              <option value="all">הכל</option>
             </select>
           </div>
           <div className="table-card-title-group">
-            <h2 className="table-card-title">תצוגת מאסטר</h2>
-            <p className="table-card-subtitle">סיכום כולל + טבלת לידים לפי מספר סוכן וסטטוס.</p>
+            <h2 className="table-card-title">סינון מאסטר</h2>
+            <p className="table-card-subtitle">סינון לפי מספר סוכן וחודש.</p>
           </div>
-        </div>
-        <div className="table-wrap">
-          <table className="dashboard-table">
-            <thead>
-              <tr>
-                <th>שם לקוח</th>
-                <th>סוכן מפנה</th>
-                <th>מספר סוכן</th>
-                <th className="loan-amount-cell">תשלום למאסטר</th>
-                <th className="loan-amount-cell">תשלום למספר סוכן</th>
-                <th>סטטוס</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleClients.length === 0 ? (
-                <tr>
-                  <td className="table-empty" colSpan={6}>
-                    לא נמצאו רשומות.
-                  </td>
-                </tr>
-              ) : null}
-              {visibleClients.map((client) => (
-                <tr key={client.id}>
-                  <td className="td-name">{client.clientName}</td>
-                  <td>{client.referringAgentText?.trim() || "—"}</td>
-                  <td>{normalizeAgentNumber(client.agentNumber)}</td>
-                  <td className="loan-amount-cell">
-                    <span className="loan-amount-inner">
-                      {formatCurrency(client.masterPayment ?? 0)}
-                    </span>
-                  </td>
-                  <td className="loan-amount-cell">
-                    <span className="loan-amount-inner">
-                      {formatCurrency(client.paymentToAgentNumber ?? 0)}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getLeadStatusBadgeClass(
-                        client.leadStatus
-                      )}`}
-                    >
-                      {getLeadStatusLabel(client.leadStatus)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </section>
 
-      <section className="card p-6">
-        <h3 className="admin-analytics-title">סיכום לפי מספר סוכן</h3>
-        <p className="admin-analytics-subtitle text-sm text-slate-600 mb-4">
-          הקבצה לפי מספר סוכן בהתאם לסינון הסטטוס.
-        </p>
-        <div className="table-wrap">
-          <table className="dashboard-table">
-            <thead>
-              <tr>
-                <th>מספר סוכן</th>
-                <th>סה"כ לידים</th>
-                <th>מוצלחים</th>
-                <th>בתהליך</th>
-                <th>ללא הצלחה</th>
-                <th className="loan-amount-cell">סה"כ תשלום למספר סוכן</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groupedByAgentNumber.length === 0 ? (
-                <tr>
-                  <td className="table-empty" colSpan={6}>
-                    אין נתונים להצגה.
-                  </td>
-                </tr>
-              ) : null}
-              {groupedByAgentNumber.map((row) => (
-                <tr key={row.agentNumber}>
-                  <td className="td-name">{row.agentNumber}</td>
-                  <td>{row.leads}</td>
-                  <td>{row.successful}</td>
-                  <td>{row.inProgress}</td>
-                  <td>{row.failed}</td>
-                  <td className="loan-amount-cell">
-                    <span className="loan-amount-inner">{formatCurrency(row.paymentToAgentNumber)}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <LeadSection title="בוצע ושולם" rows={successfulRows} />
+      <LeadSection title="לקוחות בתהליך" rows={inProgressRows} />
+      <LeadSection title="לקוחות נסגרו ללא הצלחה" rows={failedRows} />
     </section>
   );
 }

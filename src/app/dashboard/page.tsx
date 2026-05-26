@@ -143,7 +143,7 @@ export default async function DashboardPage() {
             <DashboardClient clients={clients} canAddManualLead />
           </div>
         ) : isMaster ? (
-          <MasterDashboardView clients={clients} role="master" />
+          <MasterDashboardView clients={clients} />
         ) : isAgentNumber ? (
           <AgentNumberDashboardView clients={clients} agentNumber={user.agentNumber} />
         ) : (
