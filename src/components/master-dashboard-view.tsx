@@ -42,6 +42,7 @@ function clientDate(client: ClientRecord): Date | null {
 
 type SectionStats = {
   count: number;
+  totalLoanAmount: number;
   totalMasterPayment: number;
   totalAgentNumberPayment: number;
 };
@@ -50,11 +51,12 @@ function sectionStats(rows: ClientRecord[]): SectionStats {
   return rows.reduce(
     (acc, row) => {
       acc.count += 1;
+      acc.totalLoanAmount += row.loanAmount ?? 0;
       acc.totalMasterPayment += row.masterPayment ?? 0;
       acc.totalAgentNumberPayment += row.paymentToAgentNumber ?? 0;
       return acc;
     },
-    { count: 0, totalMasterPayment: 0, totalAgentNumberPayment: 0 }
+    { count: 0, totalLoanAmount: 0, totalMasterPayment: 0, totalAgentNumberPayment: 0 }
   );
 }
 
@@ -68,21 +70,25 @@ function LeadSection({ title, rows }: LeadSectionProps) {
 
   return (
     <section className="card p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div>
-          <h3 className="admin-analytics-title">{title}</h3>
-          <p className="admin-analytics-subtitle text-sm text-slate-600">
-            כמות לידים: <strong>{stats.count}</strong>
+      <div className="mb-4">
+        <h3 className="admin-analytics-title">{title}</h3>
+      </div>
+
+      <div className="stats-row mb-4">
+        <article className="card stat-card">
+          <p className="stat-label">מספר לקוחות</p>
+          <p className="stat-value">{stats.count}</p>
+        </article>
+        <article className="card stat-card">
+          <p className="stat-label">סכום הלוואה</p>
+          <p className="stat-value stat-value-compact">{formatCurrency(stats.totalLoanAmount)}</p>
+        </article>
+        <article className="card stat-card">
+          <p className="stat-label">עמלות פוטנציאליות</p>
+          <p className="stat-value stat-value-compact">
+            {formatCurrency(stats.totalMasterPayment + stats.totalAgentNumberPayment)}
           </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <span className="table-count-badge">
-            תשלום למאסטר: {formatCurrency(stats.totalMasterPayment)}
-          </span>
-          <span className="table-count-badge">
-            תשלום למספר סוכן: {formatCurrency(stats.totalAgentNumberPayment)}
-          </span>
-        </div>
+        </article>
       </div>
 
       <div className="table-wrap">
@@ -90,17 +96,14 @@ function LeadSection({ title, rows }: LeadSectionProps) {
           <thead>
             <tr>
               <th>שם לקוח</th>
-              <th>סוכן מפנה</th>
-              <th>מספר סוכן</th>
-              <th className="loan-amount-cell">תשלום למאסטר</th>
-              <th className="loan-amount-cell">תשלום למספר סוכן</th>
-              <th>סטטוס</th>
+              <th>סטטוס ליד</th>
+              <th className="loan-amount-cell">סכום הלוואה</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td className="table-empty" colSpan={6}>
+                <td className="table-empty" colSpan={3}>
                   אין נתונים להצגה.
                 </td>
               </tr>
@@ -108,18 +111,6 @@ function LeadSection({ title, rows }: LeadSectionProps) {
             {rows.map((client) => (
               <tr key={client.id}>
                 <td className="td-name">{client.clientName}</td>
-                <td>{client.referringAgentText?.trim() || "—"}</td>
-                <td>{normalizeAgentNumber(client.agentNumber)}</td>
-                <td className="loan-amount-cell">
-                  <span className="loan-amount-inner">
-                    {formatCurrency(client.masterPayment ?? 0)}
-                  </span>
-                </td>
-                <td className="loan-amount-cell">
-                  <span className="loan-amount-inner">
-                    {formatCurrency(client.paymentToAgentNumber ?? 0)}
-                  </span>
-                </td>
                 <td>
                   <span
                     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getLeadStatusBadgeClass(
@@ -128,6 +119,9 @@ function LeadSection({ title, rows }: LeadSectionProps) {
                   >
                     {getLeadStatusLabel(client.leadStatus)}
                   </span>
+                </td>
+                <td className="loan-amount-cell">
+                  <span className="loan-amount-inner">{formatCurrency(client.loanAmount ?? 0)}</span>
                 </td>
               </tr>
             ))}
@@ -191,7 +185,9 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
   const overallSummary = useMemo(() => {
     return filteredClients.reduce(
       (acc, client) => {
+        acc.totalAgents.add(client.agentNumber?.trim() ?? "");
         acc.totalLeads += 1;
+        acc.totalLoanAmount += client.loanAmount ?? 0;
         acc.totalMasterPayment += client.masterPayment ?? 0;
         acc.totalAgentNumberPayment += client.paymentToAgentNumber ?? 0;
         if (isSuccessfulLeadStatus(client.leadStatus)) acc.successful += 1;
@@ -200,7 +196,9 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         return acc;
       },
       {
+        totalAgents: new Set<string>(),
         totalLeads: 0,
+        totalLoanAmount: 0,
         successful: 0,
         inProgress: 0,
         failed: 0,
@@ -227,31 +225,23 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
     <section className="grid gap-6 max-w-6xl mx-auto w-full" dir="rtl">
       <section className="stats-row">
         <article className="card stat-card stat-card--indigo">
-          <p className="stat-label">סה״כ לידים</p>
-          <p className="stat-value">{overallSummary.totalLeads}</p>
+          <p className="stat-label">מספר סוכנים</p>
+          <p className="stat-value">{overallSummary.totalAgents.size}</p>
         </article>
         <article className="card stat-card stat-card--emerald">
-          <p className="stat-label">לידים מוצלחים</p>
-          <p className="stat-value">{overallSummary.successful}</p>
+          <p className="stat-label">מספר לידים</p>
+          <p className="stat-value">{overallSummary.totalLeads}</p>
         </article>
         <article className="card stat-card stat-card--teal">
-          <p className="stat-label">לידים בתהליך</p>
-          <p className="stat-value">{overallSummary.inProgress}</p>
+          <p className="stat-label">סכום הלוואות מבוקש</p>
+          <p className="stat-value stat-value-compact">{formatCurrency(overallSummary.totalLoanAmount)}</p>
         </article>
         <article className="card stat-card stat-card--rose">
-          <p className="stat-label">לידים נסגרו ללא הצלחה</p>
-          <p className="stat-value">{overallSummary.failed}</p>
-        </article>
-        <article className="card stat-card stat-card--violet">
-          <p className="stat-label">סה"כ תשלום למאסטר</p>
+          <p className="stat-label">עמלה שחולקה</p>
           <p className="stat-value stat-value-compact">
-            {formatCurrency(overallSummary.totalMasterPayment)}
-          </p>
-        </article>
-        <article className="card stat-card stat-card--indigo">
-          <p className="stat-label">סה"כ תשלום למספר סוכן</p>
-          <p className="stat-value stat-value-compact">
-            {formatCurrency(overallSummary.totalAgentNumberPayment)}
+            {formatCurrency(
+              overallSummary.totalMasterPayment + overallSummary.totalAgentNumberPayment
+            )}
           </p>
         </article>
       </section>
@@ -266,7 +256,7 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
               onChange={(event) => setSelectedAgentNumber(event.target.value)}
               aria-label="סינון לפי מספר סוכן"
             >
-              <option value="all">כל מספרי הסוכן</option>
+              <option value="all">בחירה לפי סוכן / מספר סוכן</option>
               {distinctAgentNumbers.map((agentNumber) => (
                 <option key={agentNumber} value={agentNumber}>
                   {agentNumber}
@@ -279,14 +269,14 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
               onChange={(event) => setSelectedMonth(event.target.value as MonthFilter)}
               aria-label="סינון לפי חודש"
             >
-              <option value="current">חודש נוכחי</option>
+              <option value="current">החודש הנוכחי</option>
               <option value="previous">חודש קודם</option>
               <option value="all">הכל</option>
             </select>
           </div>
           <div className="table-card-title-group">
-            <h2 className="table-card-title">סינון מאסטר</h2>
-            <p className="table-card-subtitle">סינון לפי מספר סוכן וחודש.</p>
+            <h2 className="table-card-title">סינון</h2>
+            <p className="table-card-subtitle">בחירה לפי סוכן וחודש.</p>
           </div>
         </div>
       </section>
