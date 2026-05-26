@@ -13,6 +13,7 @@ import type { ClientRecord } from "@/lib/types";
 
 type MasterDashboardViewProps = {
   clients: ClientRecord[];
+  role: "master";
 };
 
 type StatusBucket = "all" | "successful" | "in_progress" | "failed";
@@ -36,13 +37,18 @@ function normalizeAgentNumber(value: string | undefined): string {
   return trimmed && trimmed.length > 0 ? trimmed : "ללא מספר סוכן";
 }
 
-export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
+export function MasterDashboardView({ clients, role }: MasterDashboardViewProps) {
   const [statusBucket, setStatusBucket] = useState<StatusBucket>("all");
   const [selectedAgentNumber, setSelectedAgentNumber] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortBy>("agent_number_asc");
 
+  const clientsWithAgentNumber = useMemo(
+    () => clients.filter((client) => Boolean(client.agentNumber?.trim())),
+    [clients]
+  );
+
   const overallSummary = useMemo(() => {
-    return clients.reduce(
+    return clientsWithAgentNumber.reduce(
       (acc, client) => {
         acc.totalLeads += 1;
         acc.totalAgentCommission += client.masterPayment ?? 0;
@@ -66,21 +72,31 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         totalAgentNumberPayment: 0,
       }
     );
-  }, [clients]);
+  }, [clientsWithAgentNumber]);
+
+  const distinctAgentNumbers = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          clientsWithAgentNumber
+            .map((client) => client.agentNumber?.trim())
+            .filter((x): x is string => Boolean(x))
+        )
+      ).sort((left, right) => left.localeCompare(right, "he", { numeric: true })),
+    [clientsWithAgentNumber]
+  );
 
   const availableAgentNumbers = useMemo(() => {
-    return Array.from(new Set(clients.map((client) => normalizeAgentNumber(client.agentNumber)))).sort(
-      (left, right) => left.localeCompare(right, "he")
-    );
-  }, [clients]);
+    return distinctAgentNumbers;
+  }, [distinctAgentNumbers]);
 
   const visibleClients = useMemo(() => {
-    const statusFiltered = byStatusBucket(clients, statusBucket);
+    const statusFiltered = byStatusBucket(clientsWithAgentNumber, statusBucket);
     const numberFiltered =
       selectedAgentNumber === "all"
         ? statusFiltered
         : statusFiltered.filter(
-            (client) => normalizeAgentNumber(client.agentNumber) === selectedAgentNumber
+            (client) => client.agentNumber?.trim() === selectedAgentNumber
           );
 
     return [...numberFiltered].sort((left, right) => {
@@ -89,7 +105,7 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
       const comparison = leftNumber.localeCompare(rightNumber, "he", { numeric: true });
       return sortBy === "agent_number_asc" ? comparison : -comparison;
     });
-  }, [clients, selectedAgentNumber, sortBy, statusBucket]);
+  }, [clientsWithAgentNumber, selectedAgentNumber, sortBy, statusBucket]);
 
   const groupedByAgentNumber = useMemo(() => {
     const map = new Map<
@@ -97,7 +113,7 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
       { leads: number; successful: number; inProgress: number; failed: number; paymentToAgentNumber: number }
     >();
 
-    for (const client of byStatusBucket(clients, statusBucket)) {
+    for (const client of byStatusBucket(clientsWithAgentNumber, statusBucket)) {
       const key = normalizeAgentNumber(client.agentNumber);
       const existing = map.get(key) ?? {
         leads: 0,
@@ -119,11 +135,38 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
       .sort((left, right) =>
         left.agentNumber.localeCompare(right.agentNumber, "he", { numeric: true })
       );
-  }, [clients, statusBucket]);
+  }, [clientsWithAgentNumber, statusBucket]);
 
   return (
     <section className="grid gap-6 max-w-6xl mx-auto w-full" dir="rtl">
       <section className="stats-row">
+        <article className="card stat-card">
+          <p className="stat-label">Debug: role</p>
+          <p className="stat-value">{role}</p>
+          <p className="stat-sub">role שהקומפוננטה קיבלה מהשרת</p>
+        </article>
+        <article className="card stat-card">
+          <p className="stat-label">Debug: שורות נטענו</p>
+          <p className="stat-value">{clients.length}</p>
+          <p className="stat-sub">שורות כולל הכל מהשרת למאסטר</p>
+        </article>
+        <article className="card stat-card">
+          <p className="stat-label">Debug: עם מספר סוכן</p>
+          <p className="stat-value">{clientsWithAgentNumber.length}</p>
+          <p className="stat-sub">agent_number לא ריק / לא null</p>
+        </article>
+        <article className="card stat-card">
+          <p className="stat-label">Debug: מספרים ייחודיים</p>
+          <p className="stat-value">{distinctAgentNumbers.length}</p>
+          <p className="stat-sub">
+            {distinctAgentNumbers.length > 0 ? distinctAgentNumbers.join(" · ") : "אין מספרים"}
+          </p>
+        </article>
+        <article className="card stat-card">
+          <p className="stat-label">Debug: פילטר נבחר</p>
+          <p className="stat-value">{selectedAgentNumber === "all" ? "all" : selectedAgentNumber}</p>
+          <p className="stat-sub">כלומר מה מוצג כרגע בטבלה</p>
+        </article>
         <article className="card stat-card stat-card--indigo">
           <p className="stat-label">סה"כ לידים (כל הסוכנים)</p>
           <p className="stat-value">{overallSummary.totalLeads}</p>

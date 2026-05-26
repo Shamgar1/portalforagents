@@ -90,7 +90,7 @@ export default async function DashboardPage() {
             <DashboardClient clients={clients} canAddManualLead />
           </div>
         ) : isMaster ? (
-          <MasterDashboardView clients={clients} />
+          <MasterDashboardView clients={clients} role="master" />
         ) : isAgentNumber ? (
           <AgentNumberDashboardView clients={clients} agentNumber={user.agentNumber} />
         ) : (
