@@ -9,7 +9,53 @@ import { LogoutButton } from "@/components/logout-button";
 import { MasterDashboardView } from "@/components/master-dashboard-view";
 import { getSessionUser } from "@/lib/auth/session";
 import { getClientService } from "@/lib/data/client-service";
+import { getSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import type { ClientRecord } from "@/lib/types";
+
+type MasterClientRow = {
+  id: string;
+  client_name: string;
+  status: string;
+  loan_amount: number;
+  expected_commission: number;
+  agent_number: string | null;
+  payment_to_agent_number: number | null;
+  master_payment: number | null;
+  deal_creation_date: string | null;
+  created_at: string;
+  referring_agent_text: string | null;
+};
+
+async function loadMasterClientsDirectly(): Promise<ClientRecord[]> {
+  const admin = getSupabaseServiceRoleClient();
+  const { data, error } = await admin
+    .from("clients")
+    .select(
+      "id, client_name, status, loan_amount, expected_commission, agent_number, payment_to_agent_number, master_payment, deal_creation_date, created_at, referring_agent_text"
+    )
+    .not("agent_number", "is", null)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data as MasterClientRow[]).map((client) => ({
+    id: client.id,
+    clientName: client.client_name,
+    leadStatus: client.status,
+    loanAmount: client.loan_amount,
+    expectedCommission: client.expected_commission,
+    agentNumber: client.agent_number?.trim() || undefined,
+    paymentToAgentNumber: client.payment_to_agent_number ?? undefined,
+    masterPayment: client.master_payment ?? undefined,
+    referringAgentText: client.referring_agent_text ?? undefined,
+    assignedAgentId: "",
+    createdAt: client.created_at,
+    dealCreatedAt: client.deal_creation_date ?? null,
+  }));
+}
 
 export default async function DashboardPage() {
   if (!isSupabaseConfigured()) {
@@ -30,10 +76,17 @@ export default async function DashboardPage() {
   }
 
   const clientService = getClientService();
-  const clients = await clientService.listClientsForUser(user);
+  const clients =
+    user.role === "master"
+      ? await loadMasterClientsDirectly()
+      : await clientService.listClientsForUser(user);
   const isAdmin = user.role === "admin";
   const isMaster = user.role === "master";
   const isAgentNumber = user.role === "agent_number";
+
+  if (isMaster) {
+    console.log("[master dashboard] direct clients loaded", { total: clients.length });
+  }
   const roleLabel =
     user.role === "admin"
       ? "מנהל"
