@@ -56,22 +56,111 @@ function sectionStats(rows: ClientRecord[]): SectionStats {
       acc.totalAgentNumberPayment += row.paymentToAgentNumber ?? 0;
       return acc;
     },
-    { count: 0, totalLoanAmount: 0, totalMasterPayment: 0, totalAgentNumberPayment: 0 }
+    {
+      count: 0,
+      totalLoanAmount: 0,
+      totalMasterPayment: 0,
+      totalAgentNumberPayment: 0,
+    }
   );
 }
 
-type LeadSectionProps = {
-  title: string;
+function formatExecutionDate(client: ClientRecord): string {
+  const date = clientDate(client);
+  if (!date) return "—";
+  return new Intl.DateTimeFormat("he-IL", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+type SuccessfulSectionProps = {
   rows: ClientRecord[];
 };
 
-function LeadSection({ title, rows }: LeadSectionProps) {
+function SuccessfulSection({ rows }: SuccessfulSectionProps) {
   const stats = useMemo(() => sectionStats(rows), [rows]);
 
   return (
     <section className="card p-6">
       <div className="mb-4">
-        <h3 className="admin-analytics-title">{title}</h3>
+        <h3 className="admin-analytics-title">בוצע ושולם</h3>
+      </div>
+
+      <div className="stats-row mb-4">
+        <article className="card stat-card">
+          <p className="stat-label">מספר לקוחות</p>
+          <p className="stat-value">{stats.count}</p>
+        </article>
+        <article className="card stat-card">
+          <p className="stat-label">סכום הלוואה</p>
+          <p className="stat-value stat-value-compact">{formatCurrency(stats.totalLoanAmount)}</p>
+        </article>
+        <article className="card stat-card">
+          <p className="stat-label">עמלה כוללת</p>
+          <p className="stat-value stat-value-compact">
+            {formatCurrency(stats.totalMasterPayment + stats.totalAgentNumberPayment)}
+          </p>
+        </article>
+        <article className="card stat-card">
+          <p className="stat-label">עמלה לסוכן</p>
+          <p className="stat-value stat-value-compact">
+            {formatCurrency(stats.totalAgentNumberPayment)}
+          </p>
+        </article>
+      </div>
+
+      <div className="table-wrap">
+        <table className="dashboard-table">
+          <thead>
+            <tr>
+              <th>שם לקוח</th>
+              <th>תאריך ביצוע</th>
+              <th className="loan-amount-cell">סכום הלוואה</th>
+              <th className="loan-amount-cell">עמלה כוללת</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td className="table-empty" colSpan={4}>
+                  אין נתונים להצגה.
+                </td>
+              </tr>
+            ) : null}
+            {rows.map((client) => (
+              <tr key={client.id}>
+                <td className="td-name">{client.clientName}</td>
+                <td>{formatExecutionDate(client)}</td>
+                <td className="loan-amount-cell">
+                  <span className="loan-amount-inner">{formatCurrency(client.loanAmount ?? 0)}</span>
+                </td>
+                <td>
+                  <span className="loan-amount-inner">
+                    {formatCurrency((client.masterPayment ?? 0) + (client.paymentToAgentNumber ?? 0))}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+type InProgressSectionProps = {
+  rows: ClientRecord[];
+};
+
+function InProgressSection({ rows }: InProgressSectionProps) {
+  const stats = useMemo(() => sectionStats(rows), [rows]);
+
+  return (
+    <section className="card p-6">
+      <div className="mb-4">
+        <h3 className="admin-analytics-title">לקוחות בתהליך</h3>
       </div>
 
       <div className="stats-row mb-4">
@@ -123,6 +212,55 @@ function LeadSection({ title, rows }: LeadSectionProps) {
                 <td className="loan-amount-cell">
                   <span className="loan-amount-inner">{formatCurrency(client.loanAmount ?? 0)}</span>
                 </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+type FailedSectionProps = {
+  rows: ClientRecord[];
+};
+
+function FailedSection({ rows }: FailedSectionProps) {
+  const stats = useMemo(() => sectionStats(rows), [rows]);
+
+  return (
+    <section className="card p-6">
+      <div className="mb-4">
+        <h3 className="admin-analytics-title">לקוחות שנסגרו ללא הצלחה</h3>
+      </div>
+
+      <div className="stats-row mb-4">
+        <article className="card stat-card">
+          <p className="stat-label">מספר לקוחות</p>
+          <p className="stat-value">{stats.count}</p>
+        </article>
+      </div>
+
+      <div className="table-wrap">
+        <table className="dashboard-table">
+          <thead>
+            <tr>
+              <th>שם לקוח</th>
+              <th>תאריך ביצוע</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td className="table-empty" colSpan={2}>
+                  אין נתונים להצגה.
+                </td>
+              </tr>
+            ) : null}
+            {rows.map((client) => (
+              <tr key={client.id}>
+                <td className="td-name">{client.clientName}</td>
+                <td>{formatExecutionDate(client)}</td>
               </tr>
             ))}
           </tbody>
@@ -239,9 +377,7 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         <article className="card stat-card stat-card--rose">
           <p className="stat-label">עמלה שחולקה</p>
           <p className="stat-value stat-value-compact">
-            {formatCurrency(
-              overallSummary.totalMasterPayment + overallSummary.totalAgentNumberPayment
-            )}
+            {formatCurrency(overallSummary.totalAgentNumberPayment)}
           </p>
         </article>
       </section>
@@ -281,9 +417,9 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         </div>
       </section>
 
-      <LeadSection title="בוצע ושולם" rows={successfulRows} />
-      <LeadSection title="לקוחות בתהליך" rows={inProgressRows} />
-      <LeadSection title="לקוחות נסגרו ללא הצלחה" rows={failedRows} />
+      <SuccessfulSection rows={successfulRows} />
+      <InProgressSection rows={inProgressRows} />
+      <FailedSection rows={failedRows} />
     </section>
   );
 }
