@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { getSessionUser } from "@/lib/auth/session";
-import { getClientService } from "@/lib/data/client-service";
 import { isMondayOpportunitySyncConfigured } from "@/lib/integrations/monday/env";
+import { runMondayOpportunitySync } from "@/lib/integrations/monday/run-opportunity-sync";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await getClientService().syncFromMondayOpportunities({
+    const result = await runMondayOpportunitySync({
       demoItemLimit,
     });
 

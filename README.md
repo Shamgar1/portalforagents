@@ -37,6 +37,7 @@ MONDAY_LOAN_AMOUNT_COLUMN_ID=...
 MONDAY_EXPECTED_COMMISSION_COLUMN_ID=...
 MONDAY_MASTER_PAYMENT_COLUMN_ID=...
 MONDAY_REFERRING_AGENT_COLUMN_ID=...
+MONDAY_SYNC_CRON_SECRET=...
 ```
 
 **סדר טעינת משתני סביבה (Next.js):** אם משתנה כבר קיים ב־`process.env` (למשל `export` בטרמינל, Docker, או סביבת אירוח), **הוא לא ידרס** את הערך מ־`.env.local`. אם תשובת הסנכרון מציגה `referringAgentColumnId` שונה ממה שבקובץ המקומי, בדקו שאין אותו שם גם בחוץ; לדוגמה `unset MONDAY_REFERRING_AGENT_COLUMN_ID` לפני `npm run dev`.
@@ -59,6 +60,22 @@ MONDAY_REFERRING_AGENT_COLUMN_ID=...
 ה-endpoint זמין ב-`GET /api/integrations/monday/board?limit=10` ורק משתמש `admin` מחובר יכול לגשת אליו כרגע.
 
 ה-preview הנוכחי קורא רק מ-`MONDAY_OPPORTUNITIES_BOARD_ID`. לוח ה-leads נשמר במבנה הקוד לעבודה עתידית בלבד ואינו בשימוש ב-MVP הנוכחי.
+
+### סנכרון אוטומטי (כל 24 שעות)
+
+נוסף endpoint ייעודי לסנכרון מתוזמן: `POST /api/integrations/monday/sync/auto`.
+
+- ה-endpoint ממוחשב לשרת/cron בלבד ומוגן ע"י `MONDAY_SYNC_CRON_SECRET`.
+- אפשר להעביר את הסוד ב-`x-sync-secret` או `Authorization: Bearer <secret>`.
+- ה-endpoint משתמש באותה לוגיקת סנכרון הקיימת של Monday (כמו הכפתור הידני), ומוסיף לוגים לשרת על התחלה/הצלחה/כישלון.
+
+דוגמת cron יומית בשרת Linux:
+
+```bash
+0 2 * * * curl -fsS -X POST \
+  -H "Authorization: Bearer $MONDAY_SYNC_CRON_SECRET" \
+  https://<your-domain>/api/integrations/monday/sync/auto >> /var/log/portal-monday-sync.log 2>&1
+```
 
 ## יצירת נתוני לקוחות
 

@@ -99,9 +99,7 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
         </article>
         <article className="card stat-card">
           <p className="stat-label">עמלה כוללת</p>
-          <p className="stat-value stat-value-compact">
-            {formatCurrency(stats.totalMasterPayment + stats.totalAgentNumberPayment)}
-          </p>
+          <p className="stat-value stat-value-compact">{formatCurrency(stats.totalMasterPayment)}</p>
         </article>
         <article className="card stat-card">
           <p className="stat-label">עמלה לסוכן</p>
@@ -138,7 +136,7 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
                 </td>
                 <td>
                   <span className="loan-amount-inner">
-                    {formatCurrency((client.masterPayment ?? 0) + (client.paymentToAgentNumber ?? 0))}
+                    {formatCurrency(client.masterPayment ?? 0)}
                   </span>
                 </td>
               </tr>
@@ -272,6 +270,8 @@ function FailedSection({ rows }: FailedSectionProps) {
 
 export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
   const [selectedAgentNumber, setSelectedAgentNumber] = useState<string>("all");
+  const [agentNumberInput, setAgentNumberInput] = useState<string>("");
+  const [isAgentSuggestionsOpen, setIsAgentSuggestionsOpen] = useState<boolean>(false);
   const [selectedMonth, setSelectedMonth] = useState<MonthFilter>("all");
 
   const clientsWithAgentNumber = useMemo(
@@ -290,6 +290,17 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
       ).sort((left, right) => left.localeCompare(right, "he", { numeric: true })),
     [clientsWithAgentNumber]
   );
+
+  const matchingAgentSuggestions = useMemo(() => {
+    const normalizedInput = agentNumberInput.trim();
+    if (normalizedInput.length === 0) {
+      return distinctAgentNumbers.slice(0, 50);
+    }
+
+    return distinctAgentNumbers
+      .filter((agentNumber) => agentNumber.startsWith(normalizedInput))
+      .slice(0, 50);
+  }, [agentNumberInput, distinctAgentNumbers]);
 
   const filteredClients = useMemo(() => {
     const byAgent =
@@ -359,6 +370,35 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
     [filteredClients]
   );
 
+  function applyAgentNumberFilter(rawValue: string) {
+    const value = rawValue.trim();
+    setAgentNumberInput(rawValue);
+    setIsAgentSuggestionsOpen(true);
+
+    if (value.length === 0) {
+      setSelectedAgentNumber("all");
+      return;
+    }
+
+    const matched = distinctAgentNumbers.find((agentNumber) => agentNumber === value.trim());
+    if (matched) {
+      setSelectedAgentNumber(matched);
+    }
+  }
+
+  function selectAgentNumberSuggestion(value: string) {
+    if (value === "all") {
+      setSelectedAgentNumber("all");
+      setAgentNumberInput("");
+      setIsAgentSuggestionsOpen(false);
+      return;
+    }
+
+    setSelectedAgentNumber(value);
+    setAgentNumberInput(value);
+    setIsAgentSuggestionsOpen(false);
+  }
+
   return (
     <section className="grid gap-6 max-w-6xl mx-auto w-full" dir="rtl">
       <section className="stats-row">
@@ -386,19 +426,53 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         <div className="table-card-toolbar table-card-toolbar--compact">
           <div className="table-card-controls">
             <span className="table-count-badge">{filteredClients.length} רשומות</span>
-            <select
-              className="table-select"
-              value={selectedAgentNumber}
-              onChange={(event) => setSelectedAgentNumber(event.target.value)}
-              aria-label="סינון לפי מספר סוכן"
-            >
-              <option value="all">בחירה לפי סוכן / מספר סוכן</option>
-              {distinctAgentNumbers.map((agentNumber) => (
-                <option key={agentNumber} value={agentNumber}>
-                  {agentNumber}
-                </option>
-              ))}
-            </select>
+            <div className="agent-autocomplete">
+              <input
+                className="table-select agent-autocomplete-input"
+                value={agentNumberInput}
+                onChange={(event) => applyAgentNumberFilter(event.target.value)}
+                onFocus={() => setIsAgentSuggestionsOpen(true)}
+                onBlur={() => {
+                  window.setTimeout(() => setIsAgentSuggestionsOpen(false), 120);
+                }}
+                aria-label="חיפוש לפי מספר סוכן"
+                placeholder="בחירה לפי סוכן / מספר סוכן"
+                dir="rtl"
+              />
+              {isAgentSuggestionsOpen ? (
+                <div className="agent-autocomplete-menu" role="listbox">
+                  <button
+                    type="button"
+                    className={`agent-autocomplete-option ${
+                      selectedAgentNumber === "all" ? "agent-autocomplete-option--selected" : ""
+                    }`}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectAgentNumberSuggestion("all")}
+                  >
+                    הכל
+                  </button>
+                  {matchingAgentSuggestions.length === 0 ? (
+                    <div className="agent-autocomplete-empty">לא נמצאו מספרי סוכן</div>
+                  ) : (
+                    matchingAgentSuggestions.map((agentNumber) => (
+                      <button
+                        key={agentNumber}
+                        type="button"
+                        className={`agent-autocomplete-option ${
+                          selectedAgentNumber === agentNumber
+                            ? "agent-autocomplete-option--selected"
+                            : ""
+                        }`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => selectAgentNumberSuggestion(agentNumber)}
+                      >
+                        {agentNumber}
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
             <select
               className="table-select"
               value={selectedMonth}
