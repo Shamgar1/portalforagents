@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { isMondayOpportunitySyncConfigured } from "@/lib/integrations/monday/env";
 import { runMondayOpportunitySync } from "@/lib/integrations/monday/run-opportunity-sync";
 
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 3000;
+
 function extractCronSecret(request: Request): string | null {
   const headerValue = request.headers.get("x-sync-secret")?.trim();
   if (headerValue) return headerValue;
@@ -13,6 +16,14 @@ function extractCronSecret(request: Request): string | null {
   }
 
   return null;
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableMondayError(message: string): boolean {
+  return /status\s+(502|503|504)\b/i.test(message) || /gateway time-?out/i.test(message);
 }
 
 export async function POST(request: Request) {
@@ -58,33 +69,75 @@ export async function POST(request: Request) {
   const startedAt = Date.now();
   console.info("[Monday auto sync] started", { runId, demoItemLimit: demoItemLimit ?? null });
 
-  try {
-    const result = await runMondayOpportunitySync({ demoItemLimit });
-    console.info("[Monday auto sync] completed", {
-      runId,
-      durationMs: Date.now() - startedAt,
-      totalFetched: result.totalFetched,
-      syncedCount: result.syncedCount,
-      unmatchedCount: result.unmatchedCount,
-      totalClientsInDatabaseAfterSync: result.totalClientsInDatabaseAfterSync,
-    });
+  let attempts = 0;
+  let lastErrorMessage = "unknown error";
 
-    return NextResponse.json({
-      ok: true,
-      triggeredBy: "cron",
-      totalFetched: result.totalFetched,
-      syncedCount: result.syncedCount,
-      unmatchedCount: result.unmatchedCount,
-      durationMs: result.durationMs,
-      totalClientsInDatabaseAfterSync: result.totalClientsInDatabaseAfterSync,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown error";
-    console.error("[Monday auto sync] failed", {
-      runId,
-      durationMs: Date.now() - startedAt,
-      error: message,
-    });
-    return NextResponse.json({ error: message }, { status: 502 });
+  while (attempts < MAX_ATTEMPTS) {
+    attempts += 1;
+    try {
+      const result = await runMondayOpportunitySync({ demoItemLimit });
+      console.info("[Monday auto sync] completed", {
+        runId,
+        attempts,
+        durationMs: Date.now() - startedAt,
+        totalFetched: result.totalFetched,
+        syncedCount: result.syncedCount,
+        unmatchedCount: result.unmatchedCount,
+        totalClientsInDatabaseAfterSync: result.totalClientsInDatabaseAfterSync,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        triggeredBy: "cron",
+        attempts,
+        totalFetched: result.totalFetched,
+        syncedCount: result.syncedCount,
+        unmatchedCount: result.unmatchedCount,
+        durationMs: result.durationMs,
+        totalClientsInDatabaseAfterSync: result.totalClientsInDatabaseAfterSync,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown error";
+      lastErrorMessage = message;
+      const retryable = isRetryableMondayError(message);
+      const willRetry = retryable && attempts < MAX_ATTEMPTS;
+
+      console.error("[Monday auto sync] failed", {
+        runId,
+        attempts,
+        retryable,
+        willRetry,
+        durationMs: Date.now() - startedAt,
+        error: message,
+      });
+
+      if (!willRetry) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: message,
+            attempts,
+          },
+          { status: retryable ? 502 : 500 }
+        );
+      }
+
+      console.info("[Monday auto sync] retrying after transient Monday failure", {
+        runId,
+        attempts,
+        nextAttempt: attempts + 1,
+        delayMs: RETRY_DELAY_MS,
+      });
+      await wait(RETRY_DELAY_MS);
+    }
   }
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error: lastErrorMessage,
+      attempts,
+    },
+    { status: 502 }
+  );
 }

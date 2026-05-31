@@ -33,7 +33,6 @@ type ClientRow = {
   status: LeadStatus;
   loan_amount: number;
   expected_commission: number;
-  master_payment?: number | null;
   payment_to_agent_number?: number | null;
   agent_number?: string | null;
   agent_id: string | null;
@@ -53,8 +52,6 @@ class SupabaseClientRepository implements ClientRepository {
     return (data as ClientRow[]).map((client) => {
       const profile =
         Array.isArray(client.profiles) ? client.profiles[0] ?? null : client.profiles;
-      const normalizedAgentNumber =
-        client.agent_number == null ? undefined : String(client.agent_number).trim() || undefined;
 
       const dealCreatedAt =
         client.deal_created_at ?? client.deal_creation_date ?? null;
@@ -65,12 +62,11 @@ class SupabaseClientRepository implements ClientRepository {
         leadStatus: client.status,
         loanAmount: client.loan_amount,
         expectedCommission: client.expected_commission,
-        masterPayment: client.master_payment ?? undefined,
         assignedAgentId: client.agent_id ?? "",
         assignedAgentName:
           user.role === "admin" || user.role === "master" ? profile?.full_name ?? undefined : undefined,
         referringAgentText: client.referring_agent_text ?? undefined,
-        agentNumber: normalizedAgentNumber,
+        agentNumber: client.agent_number ?? undefined,
         paymentToAgentNumber: client.payment_to_agent_number ?? undefined,
         mondayItemId: client.monday_item_id ?? undefined,
         createdAt: client.created_at,
@@ -84,9 +80,12 @@ class SupabaseClientRepository implements ClientRepository {
     user: SessionUser
   ): Promise<ClientRow[]> {
     const selectAttempts = [
-      "id, client_name, status, loan_amount, expected_commission, master_payment, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, deal_created_at, deal_creation_date, created_at, profiles:agent_id (full_name)",
-      "id, client_name, status, loan_amount, expected_commission, master_payment, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, deal_creation_date, created_at, profiles:agent_id (full_name)",
-      "id, client_name, status, loan_amount, expected_commission, master_payment, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, deal_created_at, deal_creation_date, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, deal_creation_date, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, agent_id, referring_agent_text, monday_item_id, deal_created_at, deal_creation_date, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, agent_id, referring_agent_text, monday_item_id, deal_creation_date, created_at, profiles:agent_id (full_name)",
+      "id, client_name, status, loan_amount, expected_commission, agent_id, referring_agent_text, monday_item_id, created_at, profiles:agent_id (full_name)",
     ];
 
     const runSelect = (select: string) => {
@@ -95,9 +94,6 @@ class SupabaseClientRepository implements ClientRepository {
         q = q.eq("agent_id", user.id);
       } else if (user.role === "agent_number") {
         q = q.eq("agent_number", user.agentNumber ?? "__missing_agent_number__");
-      } else if (user.role === "master") {
-        // Master view is explicitly by agent_number, across all agents.
-        q = q.not("agent_number", "is", null);
       }
       return q;
     };
@@ -112,7 +108,9 @@ class SupabaseClientRepository implements ClientRepository {
       lastError = result.error.message;
       const recoverable =
         lastError.includes("deal_created_at") ||
-        lastError.includes("deal_creation_date");
+        lastError.includes("deal_creation_date") ||
+        lastError.includes("payment_to_agent_number") ||
+        lastError.includes("agent_number");
       if (!recoverable) {
         throw new Error(lastError);
       }

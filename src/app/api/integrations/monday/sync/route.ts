@@ -80,6 +80,8 @@ export async function POST(request: Request) {
       ok: true,
       referringAgentColumnId: result.referringAgentColumnId,
       masterPaymentColumnId: result.masterPaymentColumnId,
+      paymentToAgentNumberColumnId: result.paymentToAgentNumberColumnId,
+      formulaColumnDebugSamples: result.formulaColumnDebugSamples,
       agentNumberColumnId: result.agentNumberColumnId,
       requestedColumnIds: result.requestedColumnIds,
       totalFetched: result.totalFetched,

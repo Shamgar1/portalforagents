@@ -40,6 +40,7 @@ type BoardPreviewQueryResult = {
           value: string | null;
           type: string;
           label?: string | null;
+          display_value?: string | null;
         }>;
       }>;
     } | null;
@@ -56,6 +57,7 @@ type OpportunityItemsPageItems = {
     value: string | null;
     type: string;
     label?: string | null;
+    display_value?: string | null;
   }>;
 };
 
@@ -87,15 +89,16 @@ type ItemDebugQueryResult = {
       value: string | null;
       type: string;
       label?: string | null;
+      display_value?: string | null;
     }>;
   }> | null;
 };
 
 const MAX_ITEMS_PER_PAGE = 500;
 
-/** Includes StatusValue.label so color/status columns (e.g. סוכן מפנה) return the human-readable option. */
+/** Status label + formula display_value for money columns (e.g. תשלום לסוכן). */
 const COLUMN_VALUES_SELECTION =
-  "id text type value ... on StatusValue { label }";
+  "id text type value ... on StatusValue { label } ... on FormulaValue { display_value }";
 
 function mapBoardItemsToOpportunities(
   boardId: string,
@@ -112,6 +115,7 @@ function mapBoardItemsToOpportunities(
       value: columnValue.value,
       type: columnValue.type,
       label: columnValue.label ?? undefined,
+      displayValue: columnValue.display_value ?? undefined,
     })),
   }));
 }
@@ -206,6 +210,7 @@ class MondayApiService implements MondayBoardService {
             type: columnValue.type,
             value: columnValue.value,
             label: columnValue.label ?? undefined,
+            displayValue: columnValue.display_value ?? undefined,
           })),
         })) ?? [],
     };
@@ -499,6 +504,7 @@ class MondayApiService implements MondayBoardService {
         type: columnValue.type,
         value: columnValue.value,
         label: columnValue.label ?? undefined,
+        displayValue: columnValue.display_value ?? undefined,
       })),
     };
   }
@@ -549,9 +555,38 @@ export function getColumnText(
   return text ? text : undefined;
 }
 
+function moneyTextFromColumnValueJson(raw: string | null | undefined): string | undefined {
+  if (!raw?.trim()) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    for (const key of ["display_value", "text", "value"]) {
+      const v = parsed[key];
+      if (typeof v === "string" && v.trim()) {
+        return v.trim();
+      }
+      if (typeof v === "number" && Number.isFinite(v)) {
+        return String(v);
+      }
+    }
+  } catch {
+    // ignore invalid JSON
+  }
+  const trimmed = raw.trim();
+  if (/[\d]/.test(trimmed)) {
+    return trimmed;
+  }
+  return undefined;
+}
+
 function displayFromColumnValueJson(raw: string | null | undefined): string | undefined {
   if (!raw?.trim()) {
     return undefined;
+  }
+  const money = moneyTextFromColumnValueJson(raw);
+  if (money) {
+    return money;
   }
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -604,6 +639,36 @@ export function getColumnDisplayText(
     return text;
   }
   return displayFromColumnValueJson(col.value);
+}
+
+export type ColumnMoneyParse = {
+  raw: string | null;
+  parsed: number;
+};
+
+/** Money/formula columns: `text`, FormulaValue `display_value`, then JSON `value`. */
+export function getColumnMoney(item: MondayOpportunityItem, columnId: string): ColumnMoneyParse {
+  const col = item.columnValues.find((columnValue) => columnValue.id === columnId);
+  if (!col) {
+    return { raw: null, parsed: 0 };
+  }
+
+  const text = col.text?.trim();
+  if (text) {
+    return { raw: text, parsed: parseMoney(text) };
+  }
+
+  const displayValue = col.displayValue?.trim();
+  if (displayValue) {
+    return { raw: displayValue, parsed: parseMoney(displayValue) };
+  }
+
+  const fromJson = moneyTextFromColumnValueJson(col.value);
+  if (fromJson) {
+    return { raw: fromJson, parsed: parseMoney(fromJson) };
+  }
+
+  return { raw: col.value?.trim() || null, parsed: 0 };
 }
 
 function ymdFromIsoPrefix(raw: string): string | undefined {
@@ -713,7 +778,16 @@ export function parseMoney(text: string | undefined): number {
     return 0;
   }
 
-  const sanitized = text.replace(/[^\d.-]/g, "");
+  let s = text.trim().replace(/\u00a0/g, " ");
+  s = s.replace(/[₪$€£\s]/g, "");
+
+  if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) {
+    s = s.replace(/,/g, "");
+  } else {
+    s = s.replace(/,/g, "");
+  }
+
+  const sanitized = s.replace(/[^\d.-]/g, "");
   const parsed = Number.parseFloat(sanitized);
 
   return Number.isFinite(parsed) ? parsed : 0;

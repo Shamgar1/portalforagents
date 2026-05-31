@@ -9,12 +9,17 @@ export type MondayOpportunitySyncEnv = {
   apiUrl: string;
   loanAmountColumnId?: string;
   expectedCommissionColumnId: string;
-  masterPaymentColumnId?: string;
+  masterPaymentColumnId: string;
   referringAgentColumnId: string;
   dealCreationDateColumnId: string;
   agentNumberColumnId?: string;
-  paymentToAgentNumberColumnId?: string;
+  paymentToAgentNumberColumnId: string;
 };
+
+/** Monday: תשלום לסוכן (עמלה כוללת) */
+export const DEFAULT_MASTER_PAYMENT_COLUMN_ID = "formula_mm2vcvt2";
+/** Monday: תשלום למספר סוכן (עמלה לסוכן) */
+export const DEFAULT_PAYMENT_TO_AGENT_NUMBER_COLUMN_ID = "formula_mm3hmh8d";
 
 function shellOverrideHint(keys: string[]): string {
   return `If .env.local looks correct but values are wrong, ${keys.join(", ")} may already be set in the shell, Docker, or hosting dashboard—Next.js does not override existing process.env keys. Run e.g. unset ${keys[0]}` + (keys.length > 1 ? ` (and other keys)` : "") + ` and restart the dev server.`;
@@ -82,17 +87,24 @@ export function getMondayOpportunitySyncEnv(): MondayOpportunitySyncEnv {
     );
   }
 
+  const masterPaymentColumnId =
+    base.masterPaymentColumnId?.trim() ||
+    expectedCommissionColumnId?.trim() ||
+    DEFAULT_MASTER_PAYMENT_COLUMN_ID;
+  const paymentToAgentNumberColumnId =
+    base.paymentToAgentNumberColumnId?.trim() || DEFAULT_PAYMENT_TO_AGENT_NUMBER_COLUMN_ID;
+
   return {
     apiToken: base.apiToken,
     boardId: base.boardId,
     apiUrl: base.apiUrl,
     loanAmountColumnId,
     expectedCommissionColumnId,
-    masterPaymentColumnId: base.masterPaymentColumnId,
+    masterPaymentColumnId,
     referringAgentColumnId,
     dealCreationDateColumnId,
     agentNumberColumnId: base.agentNumberColumnId,
-    paymentToAgentNumberColumnId: base.paymentToAgentNumberColumnId,
+    paymentToAgentNumberColumnId,
   };
 }
 

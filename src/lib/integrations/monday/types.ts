@@ -33,6 +33,16 @@ export type MondayOpportunityColumnValue = {
   type: string;
   /** Status/color column label from `... on StatusValue { label }` when present. */
   label?: string | null;
+  /** Formula column display from `... on FormulaValue { display_value }` when present. */
+  displayValue?: string | null;
+};
+
+export type MondayFormulaColumnDebugSample = {
+  itemId: string;
+  rawMasterPayment: string | null;
+  parsedMasterPayment: number;
+  rawPaymentToAgentNumber: string | null;
+  parsedPaymentToAgentNumber: number;
 };
 
 /** TEMPORARY: admin debug API — raw item + column_values from Monday. */
@@ -68,9 +78,10 @@ export type MondayOpportunitySyncRow = {
 export type MondayOpportunitySyncResult = {
   /** Resolved `MONDAY_REFERRING_AGENT_COLUMN_ID` for this sync (strict env). */
   referringAgentColumnId: string;
-  /** Optional `MONDAY_MASTER_PAYMENT_COLUMN_ID` used for master payment mapping. */
-  masterPaymentColumnId?: string;
-  /** Optional `MONDAY_AGENT_NUMBER_COLUMN_ID` used for agent number mapping. */
+  /** Resolved column id for תשלום לסוכן → `clients.master_payment`. */
+  masterPaymentColumnId: string;
+  /** Resolved column id for תשלום למספר סוכן → `clients.payment_to_agent_number`. */
+  paymentToAgentNumberColumnId: string;
   agentNumberColumnId?: string;
   requestedColumnIds: string[];
   totalFetched: number;
@@ -79,8 +90,10 @@ export type MondayOpportunitySyncResult = {
   unmatchedItems: MondayOpportunitySyncRow[];
   /** First 20 non-empty `referring_agent_text` values encountered in fetch order. */
   sampleReferringAgents: string[];
-  /** First 20 non-empty `master_payment` values mapped from Monday. */
+  /** First 20 non-zero `master_payment` values mapped from Monday. */
   sampleMasterPayments: number[];
+  /** Up to 5 items: raw/parsed formula columns for master + sub-agent payment. */
+  formulaColumnDebugSamples: MondayFormulaColumnDebugSample[];
   /** Up to 5 raw Monday column payload samples for agent number column id. */
   sampleAgentNumberRawColumns: Array<{
     itemId: string;
@@ -91,9 +104,7 @@ export type MondayOpportunitySyncResult = {
     value: string | null;
     label: string | null;
   }>;
-  /** First 20 non-empty parsed agent-number values from Monday. */
   sampleParsedAgentNumbers: string[];
-  /** First 5 upsert payload values for `agent_number`. */
   sampleUpsertAgentNumbers: Array<string | null>;
   /** Unique non-empty labels from `MONDAY_REFERRING_AGENT_COLUMN_ID` this sync (e.g. color column). */
   distinctReferringAgents: string[];

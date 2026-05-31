@@ -11,11 +11,12 @@ import { getMondayOpportunitySyncEnv, type MondayOpportunitySyncEnv } from "@/li
 import {
   getColumnDateYmd,
   getColumnDisplayText,
+  getColumnMoney,
   getColumnText,
   getMondayService,
-  parseMoney,
 } from "@/lib/integrations/monday/service";
 import type {
+  MondayFormulaColumnDebugSample,
   MondayOpportunityItem,
   MondayOpportunitySyncResult,
   MondayOpportunitySyncRow,
@@ -114,23 +115,23 @@ export function mapMondayOpportunityToSyncCandidate(
     paymentToAgentNumberColumnId,
   } = syncEnv;
 
+  const expectedCommission = getColumnMoney(item, expectedCommissionColumnId).parsed;
+  const masterPayment = getColumnMoney(item, masterPaymentColumnId).parsed;
+  const paymentToAgentNumber = getColumnMoney(item, paymentToAgentNumberColumnId).parsed;
+
   return {
     mondayItemId: item.id,
     clientName: item.name.trim(),
     leadStatus: getColumnText(item, DEAL_STAGE_COLUMN_ID) ?? "",
     loanAmount: loanAmountColumnId
-      ? parseMoney(getColumnText(item, loanAmountColumnId))
+      ? getColumnMoney(item, loanAmountColumnId).parsed
       : 0,
-    expectedCommission: parseMoney(getColumnText(item, expectedCommissionColumnId)),
-    masterPayment: masterPaymentColumnId
-      ? parseMoney(getColumnText(item, masterPaymentColumnId))
-      : undefined,
+    expectedCommission,
+    masterPayment,
     agentNumber: agentNumberColumnId
       ? getColumnDisplayText(item, agentNumberColumnId)?.trim() || undefined
       : undefined,
-    paymentToAgentNumber: paymentToAgentNumberColumnId
-      ? parseMoney(getColumnText(item, paymentToAgentNumberColumnId))
-      : undefined,
+    paymentToAgentNumber,
     referringAgentText: getColumnDisplayText(item, referringAgentColumnId),
     dealCreatedAt: getColumnDateYmd(item, dealCreationDateColumnId),
     sourceBoard: "opportunities",
@@ -204,16 +205,7 @@ class DefaultClientService implements ClientService {
     const profilesByName = new Map<string, SyncProfile>();
     const sampleReferringAgents: string[] = [];
     const sampleMasterPayments: number[] = [];
-    const sampleAgentNumberRawColumns: Array<{
-      itemId: string;
-      found: boolean;
-      columnId: string | null;
-      type: string | null;
-      text: string | null;
-      value: string | null;
-      label: string | null;
-    }> = [];
-    const sampleParsedAgentNumbers: string[] = [];
+    const formulaColumnDebugSamples: MondayFormulaColumnDebugSample[] = [];
 
     const pushReferringSample = (referringAgentText: string | undefined) => {
       const t = referringAgentText?.trim();
@@ -228,43 +220,12 @@ class DefaultClientService implements ClientService {
       if (
         masterPayment == null ||
         !Number.isFinite(masterPayment) ||
+        masterPayment === 0 ||
         sampleMasterPayments.length >= 20
       ) {
         return;
       }
       sampleMasterPayments.push(masterPayment);
-    };
-
-    const clip = (value: string | null | undefined): string | null => {
-      if (value == null) {
-        return null;
-      }
-      return value.length > 200 ? `${value.slice(0, 200)}…` : value;
-    };
-
-    const pushAgentNumberDebugSamples = (
-      item: MondayOpportunityItem,
-      candidate: MondayOpportunitySyncRow
-    ) => {
-      if (env.agentNumberColumnId && sampleAgentNumberRawColumns.length < 5) {
-        const raw = item.columnValues.find(
-          (columnValue) => columnValue.id === env.agentNumberColumnId
-        );
-        sampleAgentNumberRawColumns.push({
-          itemId: item.id,
-          found: Boolean(raw),
-          columnId: raw?.id ?? null,
-          type: raw?.type ?? null,
-          text: clip(raw?.text),
-          value: clip(raw?.value),
-          label: clip(raw?.label ?? null),
-        });
-      }
-
-      const parsed = candidate.agentNumber?.trim();
-      if (parsed && sampleParsedAgentNumbers.length < 20) {
-        sampleParsedAgentNumbers.push(parsed);
-      }
     };
 
     for (const profile of profiles) {
@@ -277,7 +238,25 @@ class DefaultClientService implements ClientService {
 
       pushReferringSample(candidate.referringAgentText);
       pushMasterPaymentSample(candidate.masterPayment);
-      pushAgentNumberDebugSamples(item, candidate);
+
+      if (formulaColumnDebugSamples.length < 5) {
+        const master = getColumnMoney(item, env.masterPaymentColumnId);
+        const payment = getColumnMoney(item, env.paymentToAgentNumberColumnId);
+        const sample: MondayFormulaColumnDebugSample = {
+          itemId: item.id,
+          rawMasterPayment: master.raw,
+          parsedMasterPayment: master.parsed,
+          rawPaymentToAgentNumber: payment.raw,
+          parsedPaymentToAgentNumber: payment.parsed,
+        };
+        formulaColumnDebugSamples.push(sample);
+        console.log("[Monday sync] formula column sample", {
+          [`raw ${env.masterPaymentColumnId}`]: sample.rawMasterPayment,
+          parsed_master_payment: sample.parsedMasterPayment,
+          [`raw ${env.paymentToAgentNumberColumnId}`]: sample.rawPaymentToAgentNumber,
+          parsed_payment_to_agent_number: sample.parsedPaymentToAgentNumber,
+        });
+      }
 
       const normalizedAgentName = normalizePersonName(candidate.referringAgentText ?? "");
       const normalizedAgentNameCompact = normalizePersonNameCompact(
@@ -311,17 +290,6 @@ class DefaultClientService implements ClientService {
 
     await this.repository.upsertMondayOpportunities(upsertRows);
 
-    const sampleUpsertAgentNumbers = upsertRows
-      .slice(0, 5)
-      .map((row) => row.agentNumber ?? null);
-
-    console.log("[Monday sync] agent number debug", {
-      agentNumberColumnId: env.agentNumberColumnId ?? null,
-      rawSamples: sampleAgentNumberRawColumns,
-      parsedSamples: sampleParsedAgentNumbers,
-      upsertSamples: sampleUpsertAgentNumbers,
-    });
-
     const distinctReferringAgents = [
       ...new Set(
         upsertRows
@@ -336,6 +304,7 @@ class DefaultClientService implements ClientService {
     return {
       referringAgentColumnId: env.referringAgentColumnId,
       masterPaymentColumnId: env.masterPaymentColumnId,
+      paymentToAgentNumberColumnId: env.paymentToAgentNumberColumnId,
       agentNumberColumnId: env.agentNumberColumnId,
       requestedColumnIds,
       totalFetched: mondayItems.length,
@@ -344,9 +313,10 @@ class DefaultClientService implements ClientService {
       unmatchedItems,
       sampleReferringAgents,
       sampleMasterPayments,
-      sampleAgentNumberRawColumns,
-      sampleParsedAgentNumbers,
-      sampleUpsertAgentNumbers,
+      formulaColumnDebugSamples,
+      sampleAgentNumberRawColumns: [],
+      sampleParsedAgentNumbers: [],
+      sampleUpsertAgentNumbers: [],
       distinctReferringAgents,
       boardItemCount: fetchMeta.boardItemCount,
       pagesFetched: fetchMeta.pagesFetched,
