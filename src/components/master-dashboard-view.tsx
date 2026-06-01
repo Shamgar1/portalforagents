@@ -1,6 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 
 import { dealOrRecordTimeMs, formatCurrency } from "@/lib/dashboard/formatters";
 import {
@@ -16,6 +25,257 @@ type MasterDashboardViewProps = {
 };
 
 type MonthFilter = "all" | "current" | "previous";
+
+const AGENT_NUMBER_PORTAL_ROOT_ID = "agent-number-autocomplete-portal-root";
+
+type MenuPosition = {
+  top: number;
+  left: number;
+  width: number;
+};
+
+type MasterAgentNumberFilterProps = {
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+};
+
+function filterDigits(value: string): string {
+  return value.normalize("NFKC").replace(/\D/g, "");
+}
+
+function ensureAgentNumberPortalRoot(): HTMLElement {
+  const portalRootId = "agent-number-autocomplete-portal-root";
+  let root = document.getElementById(portalRootId);
+  if (!root) {
+    root = document.createElement("div");
+    root.id = portalRootId;
+    document.body.appendChild(root);
+  }
+  return root;
+}
+
+function MasterAgentNumberFilter({ options, value, onChange }: MasterAgentNumberFilterProps) {
+  const [searchText, setSearchText] = useState("");
+  const [open, setOpen] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
+  const portalRootRef = useRef<HTMLElement | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+  const inputWrapRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
+  const committedValueRef = useRef(value);
+
+  const normalizedOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          options
+            .map((agentNumber) => String(agentNumber).trim())
+            .filter((agentNumber) => agentNumber.length > 0)
+        )
+      ).sort((left, right) => left.localeCompare(right, "he", { numeric: true })),
+    [options]
+  );
+
+  useLayoutEffect(() => {
+    const root = ensureAgentNumberPortalRoot();
+    portalRootRef.current = root;
+    setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (committedValueRef.current === value) {
+      return;
+    }
+    committedValueRef.current = value;
+    setSearchText(value === "all" ? "" : value);
+  }, [value]);
+
+  const queryDigits = filterDigits(searchText);
+
+  const filteredOptions = useMemo(() => {
+    if (!queryDigits) {
+      return normalizedOptions;
+    }
+    return normalizedOptions.filter((agentNumber) =>
+      filterDigits(agentNumber).startsWith(queryDigits)
+    );
+  }, [normalizedOptions, queryDigits]);
+
+  const updateMenuPosition = useCallback(() => {
+    const inputEl = inputRef.current;
+    if (!inputEl) {
+      return;
+    }
+    const rect = inputEl.getBoundingClientRect();
+    setMenuPosition({
+      top: rect.bottom + 8,
+      left: rect.left,
+      width: rect.width,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (open) {
+      updateMenuPosition();
+    }
+  }, [open, updateMenuPosition, searchText, filteredOptions.length]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (inputWrapRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+      setOpen(false);
+    }
+
+    function handleScrollOrResize() {
+      updateMenuPosition();
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("resize", handleScrollOrResize);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("resize", handleScrollOrResize);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+    };
+  }, [open, updateMenuPosition]);
+
+  function selectOption(next: string) {
+    committedValueRef.current = next;
+    if (next === "all") {
+      onChange("all");
+      setSearchText("");
+    } else {
+      onChange(next);
+      setSearchText(next);
+    }
+    setOpen(false);
+  }
+
+  const showAllOption = !queryDigits;
+  const showNoMatches = queryDigits.length > 0 && filteredOptions.length === 0;
+
+  const portalContainer = portalReady ? portalRootRef.current : null;
+
+  const portalDropdown =
+    open && portalContainer && menuPosition ? (
+      <ul
+        ref={menuRef}
+        id={listboxId}
+        role="listbox"
+        className="agent-number-portal-dropdown"
+        dir="rtl"
+        style={{
+          position: "fixed",
+          top: menuPosition.top,
+          left: menuPosition.left,
+          width: menuPosition.width,
+          zIndex: 999999,
+          margin: 0,
+          padding: "6px",
+          listStyle: "none",
+          maxHeight: 280,
+          overflowY: "auto",
+          border: "1px solid #cbd5e1",
+          borderRadius: 12,
+          background: "#ffffff",
+          boxShadow: "0 12px 28px rgba(15, 23, 42, 0.16)",
+        }}
+      >
+        {showAllOption ? (
+          <li className="agent-autocomplete-item" role="presentation">
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === "all"}
+              className={`agent-autocomplete-option ${
+                value === "all" ? "agent-autocomplete-option--selected" : ""
+              }`}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => selectOption("all")}
+            >
+              הכל
+            </button>
+          </li>
+        ) : null}
+        {filteredOptions.map((agentNumber) => (
+          <li key={agentNumber} className="agent-autocomplete-item" role="presentation">
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === agentNumber}
+              className={`agent-autocomplete-option ${
+                value === agentNumber ? "agent-autocomplete-option--selected" : ""
+              }`}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => selectOption(agentNumber)}
+            >
+              {agentNumber}
+            </button>
+          </li>
+        ))}
+        {showNoMatches ? (
+          <li className="agent-autocomplete-empty" role="presentation">
+            אין מספרים תואמים
+          </li>
+        ) : null}
+      </ul>
+    ) : null;
+
+  return (
+    <>
+      <div className="agent-autocomplete" ref={inputWrapRef} dir="rtl">
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          className="agent-autocomplete-input"
+          value={searchText}
+          onChange={(event) => {
+            const next = event.target.value;
+            setSearchText(next);
+            setOpen(true);
+            updateMenuPosition();
+            if (filterDigits(next).length === 0) {
+              committedValueRef.current = "all";
+              onChange("all");
+            }
+          }}
+          onFocus={() => {
+            setOpen(true);
+            updateMenuPosition();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setOpen(false);
+            }
+          }}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-label="חיפוש לפי מספר סוכן"
+          placeholder="בחירה לפי סוכן / מספר סוכן"
+          autoComplete="off"
+        />
+      </div>
+      {portalDropdown && portalContainer
+        ? createPortal(portalDropdown, portalContainer)
+        : null}
+    </>
+  );
+}
 
 function normalizeAgentNumber(value: string | undefined): string {
   const trimmed = value?.trim();
@@ -269,9 +529,11 @@ function FailedSection({ rows }: FailedSectionProps) {
 }
 
 export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
+  useLayoutEffect(() => {
+    ensureAgentNumberPortalRoot();
+  }, []);
+
   const [selectedAgentNumber, setSelectedAgentNumber] = useState<string>("all");
-  const [agentNumberInput, setAgentNumberInput] = useState<string>("");
-  const [isAgentSuggestionsOpen, setIsAgentSuggestionsOpen] = useState<boolean>(false);
   const [selectedMonth, setSelectedMonth] = useState<MonthFilter>("all");
 
   const clientsWithAgentNumber = useMemo(
@@ -290,17 +552,6 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
       ).sort((left, right) => left.localeCompare(right, "he", { numeric: true })),
     [clientsWithAgentNumber]
   );
-
-  const matchingAgentSuggestions = useMemo(() => {
-    const normalizedInput = agentNumberInput.trim();
-    if (normalizedInput.length === 0) {
-      return distinctAgentNumbers.slice(0, 50);
-    }
-
-    return distinctAgentNumbers
-      .filter((agentNumber) => agentNumber.startsWith(normalizedInput))
-      .slice(0, 50);
-  }, [agentNumberInput, distinctAgentNumbers]);
 
   const filteredClients = useMemo(() => {
     const byAgent =
@@ -370,35 +621,6 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
     [filteredClients]
   );
 
-  function applyAgentNumberFilter(rawValue: string) {
-    const value = rawValue.trim();
-    setAgentNumberInput(rawValue);
-    setIsAgentSuggestionsOpen(true);
-
-    if (value.length === 0) {
-      setSelectedAgentNumber("all");
-      return;
-    }
-
-    const matched = distinctAgentNumbers.find((agentNumber) => agentNumber === value.trim());
-    if (matched) {
-      setSelectedAgentNumber(matched);
-    }
-  }
-
-  function selectAgentNumberSuggestion(value: string) {
-    if (value === "all") {
-      setSelectedAgentNumber("all");
-      setAgentNumberInput("");
-      setIsAgentSuggestionsOpen(false);
-      return;
-    }
-
-    setSelectedAgentNumber(value);
-    setAgentNumberInput(value);
-    setIsAgentSuggestionsOpen(false);
-  }
-
   return (
     <section className="grid gap-6 max-w-6xl mx-auto w-full" dir="rtl">
       <section className="stats-row">
@@ -426,53 +648,11 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         <div className="table-card-toolbar table-card-toolbar--compact">
           <div className="table-card-controls">
             <span className="table-count-badge">{filteredClients.length} רשומות</span>
-            <div className="agent-autocomplete">
-              <input
-                className="table-select agent-autocomplete-input"
-                value={agentNumberInput}
-                onChange={(event) => applyAgentNumberFilter(event.target.value)}
-                onFocus={() => setIsAgentSuggestionsOpen(true)}
-                onBlur={() => {
-                  window.setTimeout(() => setIsAgentSuggestionsOpen(false), 120);
-                }}
-                aria-label="חיפוש לפי מספר סוכן"
-                placeholder="בחירה לפי סוכן / מספר סוכן"
-                dir="rtl"
-              />
-              {isAgentSuggestionsOpen ? (
-                <div className="agent-autocomplete-menu" role="listbox">
-                  <button
-                    type="button"
-                    className={`agent-autocomplete-option ${
-                      selectedAgentNumber === "all" ? "agent-autocomplete-option--selected" : ""
-                    }`}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => selectAgentNumberSuggestion("all")}
-                  >
-                    הכל
-                  </button>
-                  {matchingAgentSuggestions.length === 0 ? (
-                    <div className="agent-autocomplete-empty">לא נמצאו מספרי סוכן</div>
-                  ) : (
-                    matchingAgentSuggestions.map((agentNumber) => (
-                      <button
-                        key={agentNumber}
-                        type="button"
-                        className={`agent-autocomplete-option ${
-                          selectedAgentNumber === agentNumber
-                            ? "agent-autocomplete-option--selected"
-                            : ""
-                        }`}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => selectAgentNumberSuggestion(agentNumber)}
-                      >
-                        {agentNumber}
-                      </button>
-                    ))
-                  )}
-                </div>
-              ) : null}
-            </div>
+            <MasterAgentNumberFilter
+              options={distinctAgentNumbers}
+              value={selectedAgentNumber}
+              onChange={setSelectedAgentNumber}
+            />
             <select
               className="table-select"
               value={selectedMonth}
