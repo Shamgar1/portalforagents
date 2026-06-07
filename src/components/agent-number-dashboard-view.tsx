@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
 import { formatCurrency } from "@/lib/dashboard/formatters";
 import {
@@ -13,9 +13,7 @@ import type { ClientRecord } from "@/lib/types";
 
 type AgentNumberDashboardViewProps = {
   clients: ClientRecord[];
-  role: string;
   agentNumber?: string;
-  appliedFilter?: string;
 };
 
 type StatusSectionProps = {
@@ -105,22 +103,8 @@ function StatusSection({ title, clients }: StatusSectionProps) {
 
 export function AgentNumberDashboardView({
   clients,
-  role,
   agentNumber,
-  appliedFilter,
 }: AgentNumberDashboardViewProps) {
-  const uniqueAgentNumbers = useMemo(
-    () =>
-      [
-        ...new Set(
-          clients
-            .map((client) => client.agentNumber?.trim())
-            .filter((value): value is string => Boolean(value))
-        ),
-      ].sort(),
-    [clients]
-  );
-
   const successfulLeads = useMemo(
     () => clients.filter((client) => isSuccessfulLeadStatus(client.leadStatus)),
     [clients]
@@ -134,17 +118,6 @@ export function AgentNumberDashboardView({
     [clients]
   );
 
-  useEffect(() => {
-    const debugPayload = {
-      role,
-      agentNumber: agentNumber ?? null,
-      clientsCount: clients.length,
-      uniqueAgentNumbers,
-      appliedFilter: appliedFilter ?? null,
-    };
-    console.log("[AgentNumberDashboardView]", debugPayload);
-  }, [role, agentNumber, clients.length, uniqueAgentNumbers, appliedFilter]);
-
   return (
     <div className="agent-dashboard-shell">
       <section className="card p-6" dir="rtl">
@@ -153,35 +126,6 @@ export function AgentNumberDashboardView({
           מציג רק את הלידים המשויכים למספר הסוכן שלך: <strong>{agentNumber || "לא הוגדר"}</strong>
         </p>
       </section>
-
-      <section className="stats-row" dir="rtl">
-        <article className="card stat-card stat-card--indigo">
-          <p className="stat-label">Debug: תפקיד מחובר</p>
-          <p className="stat-value stat-value-compact">{role}</p>
-        </article>
-        <article className="card stat-card stat-card--emerald">
-          <p className="stat-label">Debug: מספר סוכן בפרופיל</p>
-          <p className="stat-value stat-value-compact">{agentNumber || "לא הוגדר"}</p>
-        </article>
-        <article className="card stat-card stat-card--teal">
-          <p className="stat-label">Debug: לידים שהתקבלו מהשרת</p>
-          <p className="stat-value">{clients.length}</p>
-        </article>
-        <article className="card stat-card stat-card--rose">
-          <p className="stat-label">Debug: מספרי סוכן ייחודיים בנתונים</p>
-          <p className="stat-value stat-value-compact">
-            {uniqueAgentNumbers.length > 0 ? uniqueAgentNumbers.join(" · ") : "—"}
-          </p>
-        </article>
-      </section>
-
-      {appliedFilter ? (
-        <section className="card p-4" dir="rtl">
-          <p className="text-sm text-slate-700">
-            <span className="font-semibold">Debug: סינון שרת:</span> {appliedFilter}
-          </p>
-        </section>
-      ) : null}
       <StatusSection title="לידים שבוצעו בהצלחה" clients={successfulLeads} />
       <StatusSection title="לידים בתהליך" clients={inProgressLeads} />
       <StatusSection title="לידים ללא הצלחה" clients={failedLeads} />
