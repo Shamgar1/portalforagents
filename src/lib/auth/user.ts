@@ -12,7 +12,7 @@ export function mapProfileRow(profile: ProfileRow): UserProfile {
     id: profile.id,
     fullName: profile.full_name,
     role: profile.role,
-    agentNumber: profile.agent_number ?? undefined,
+    agentNumber: profile.agent_number?.trim() || undefined,
   };
 }
 

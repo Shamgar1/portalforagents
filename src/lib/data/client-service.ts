@@ -7,15 +7,22 @@ import type {
 import { getClientRepository } from "@/lib/data/client-repository";
 import { mapProfileRow } from "@/lib/auth/user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { getMondayOpportunitySyncEnv, type MondayOpportunitySyncEnv } from "@/lib/integrations/monday/env";
+import {
+  DEFAULT_MASTER_PAYMENT_COLUMN_ID,
+  DEFAULT_PAYMENT_TO_AGENT_NUMBER_COLUMN_ID,
+  getMondayOpportunitySyncEnv,
+  type MondayOpportunitySyncEnv,
+} from "@/lib/integrations/monday/env";
 import {
   getColumnDateYmd,
   getColumnDisplayText,
   getColumnMoney,
+  getColumnRawDebugSample,
   getColumnText,
   getMondayService,
 } from "@/lib/integrations/monday/service";
 import type {
+  MondayColumnRawDebugSample,
   MondayFormulaColumnDebugSample,
   MondayOpportunityItem,
   MondayOpportunitySyncResult,
@@ -191,6 +198,18 @@ class DefaultClientService implements ClientService {
     ];
     console.log("REF COLUMN", env.referringAgentColumnId);
     console.log("REQUESTED COLUMNS", requestedColumnIds);
+    console.log("[Monday sync] formula debug column ids", {
+      masterPaymentColumnId: env.masterPaymentColumnId,
+      paymentToAgentNumberColumnId: env.paymentToAgentNumberColumnId,
+      rawSampleMasterColumnId: DEFAULT_MASTER_PAYMENT_COLUMN_ID,
+      rawSamplePaymentColumnId: DEFAULT_PAYMENT_TO_AGENT_NUMBER_COLUMN_ID,
+      masterInRequest: requestedColumnIds.includes(env.masterPaymentColumnId),
+      paymentInRequest: requestedColumnIds.includes(env.paymentToAgentNumberColumnId),
+      formulaMasterInRequest: requestedColumnIds.includes(DEFAULT_MASTER_PAYMENT_COLUMN_ID),
+      formulaPaymentInRequest: requestedColumnIds.includes(
+        DEFAULT_PAYMENT_TO_AGENT_NUMBER_COLUMN_ID
+      ),
+    });
 
     const syncFetch = await getMondayService().getOpportunityItemsForSync({
       maxItems: options?.demoItemLimit,
@@ -206,6 +225,8 @@ class DefaultClientService implements ClientService {
     const sampleReferringAgents: string[] = [];
     const sampleMasterPayments: number[] = [];
     const formulaColumnDebugSamples: MondayFormulaColumnDebugSample[] = [];
+    const sampleMasterPaymentRawColumns: MondayColumnRawDebugSample[] = [];
+    const samplePaymentToAgentNumberRawColumns: MondayColumnRawDebugSample[] = [];
 
     const pushReferringSample = (referringAgentText: string | undefined) => {
       const t = referringAgentText?.trim();
@@ -217,15 +238,25 @@ class DefaultClientService implements ClientService {
     };
 
     const pushMasterPaymentSample = (masterPayment: number | undefined) => {
-      if (
-        masterPayment == null ||
-        !Number.isFinite(masterPayment) ||
-        masterPayment === 0 ||
-        sampleMasterPayments.length >= 20
-      ) {
+      if (sampleMasterPayments.length >= 20) {
         return;
       }
-      sampleMasterPayments.push(masterPayment);
+      sampleMasterPayments.push(
+        masterPayment != null && Number.isFinite(masterPayment) ? masterPayment : 0
+      );
+    };
+
+    const pushFormulaRawSamples = (item: MondayOpportunityItem) => {
+      if (sampleMasterPaymentRawColumns.length < 5) {
+        sampleMasterPaymentRawColumns.push(
+          getColumnRawDebugSample(item, DEFAULT_MASTER_PAYMENT_COLUMN_ID)
+        );
+      }
+      if (samplePaymentToAgentNumberRawColumns.length < 5) {
+        samplePaymentToAgentNumberRawColumns.push(
+          getColumnRawDebugSample(item, DEFAULT_PAYMENT_TO_AGENT_NUMBER_COLUMN_ID)
+        );
+      }
     };
 
     for (const profile of profiles) {
@@ -238,6 +269,7 @@ class DefaultClientService implements ClientService {
 
       pushReferringSample(candidate.referringAgentText);
       pushMasterPaymentSample(candidate.masterPayment);
+      pushFormulaRawSamples(item);
 
       if (formulaColumnDebugSamples.length < 5) {
         const master = getColumnMoney(item, env.masterPaymentColumnId);
@@ -314,6 +346,8 @@ class DefaultClientService implements ClientService {
       sampleReferringAgents,
       sampleMasterPayments,
       formulaColumnDebugSamples,
+      sampleMasterPaymentRawColumns,
+      samplePaymentToAgentNumberRawColumns,
       sampleAgentNumberRawColumns: [],
       sampleParsedAgentNumbers: [],
       sampleUpsertAgentNumbers: [],

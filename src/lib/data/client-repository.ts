@@ -1,4 +1,9 @@
+import {
+  filterAgentNumberDigits,
+  writeAgentNumberDebugLog,
+} from "@/lib/debug/agent-number-debug";
 import { ClientRecord, LeadStatus, ManualLeadInput, SessionUser } from "@/lib/types";
+import { getSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 const UPSERT_CHUNK_SIZE = 200;
@@ -79,6 +84,30 @@ class SupabaseClientRepository implements ClientRepository {
     supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
     user: SessionUser
   ): Promise<ClientRow[]> {
+    const agentNumberFilter = user.agentNumber?.trim() ?? null;
+    const useServiceRoleForAgentNumber =
+      user.role === "agent_number" && Boolean(agentNumberFilter);
+    const queryClient = useServiceRoleForAgentNumber
+      ? getSupabaseServiceRoleClient()
+      : supabase;
+
+    // #region agent log
+    if (user.role === "agent_number") {
+      writeAgentNumberDebugLog({
+        runId: "agent-number-debug",
+        hypothesisId: "H3-H5",
+        location: "client-repository.ts:listClientRows:entry",
+        message: "agent_number load path",
+        data: {
+          agentNumberFilter,
+          agentNumberFilterLen: agentNumberFilter?.length ?? 0,
+          useServiceRoleForAgentNumber,
+          usedMissingPlaceholder: !agentNumberFilter,
+        },
+      });
+    }
+    // #endregion
+
     const selectAttempts = [
       "id, client_name, status, loan_amount, expected_commission, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, deal_created_at, deal_creation_date, created_at, profiles:agent_id (full_name)",
       "id, client_name, status, loan_amount, expected_commission, payment_to_agent_number, agent_number, agent_id, referring_agent_text, monday_item_id, deal_creation_date, created_at, profiles:agent_id (full_name)",
@@ -89,11 +118,11 @@ class SupabaseClientRepository implements ClientRepository {
     ];
 
     const runSelect = (select: string) => {
-      let q = supabase.from("clients").select(select).order("created_at", { ascending: false });
+      let q = queryClient.from("clients").select(select).order("created_at", { ascending: false });
       if (user.role === "agent") {
         q = q.eq("agent_id", user.id);
       } else if (user.role === "agent_number") {
-        q = q.eq("agent_number", user.agentNumber ?? "__missing_agent_number__");
+        q = q.eq("agent_number", agentNumberFilter ?? "__missing_agent_number__");
       }
       return q;
     };
@@ -103,9 +132,88 @@ class SupabaseClientRepository implements ClientRepository {
     for (const select of selectAttempts) {
       const result = await runSelect(select);
       if (!result.error) {
-        return ((result.data ?? []) as unknown) as ClientRow[];
+        const rows = ((result.data ?? []) as unknown) as ClientRow[];
+        // #region agent log
+        if (user.role === "agent_number") {
+          const sampleDbAgentNumbers = rows
+            .map((row) => row.agent_number?.trim() ?? null)
+            .filter((n): n is string => Boolean(n))
+            .slice(0, 10);
+          writeAgentNumberDebugLog({
+            runId: "agent-number-debug",
+            hypothesisId: "H1-H3-H5",
+            location: "client-repository.ts:listClientRows",
+            message: "agent_number query result",
+            data: {
+              filterAgentNumber: agentNumberFilter,
+              filterAgentNumberLen: agentNumberFilter?.length ?? 0,
+              useServiceRoleForAgentNumber,
+              rowCount: rows.length,
+              sampleDbAgentNumbers,
+              selectSucceeded: select.includes("agent_number"),
+            },
+          });
+        }
+        // #endregion
+
+        if (
+          user.role === "agent_number" &&
+          agentNumberFilter &&
+          rows.length === 0 &&
+          useServiceRoleForAgentNumber &&
+          select.includes("agent_number")
+        ) {
+          const digitsFilter = filterAgentNumberDigits(agentNumberFilter);
+          const { data: fallbackRows, error: fallbackError } = await queryClient
+            .from("clients")
+            .select(select)
+            .not("agent_number", "is", null)
+            .order("created_at", { ascending: false });
+
+          if (!fallbackError && fallbackRows) {
+            const matched = ((fallbackRows as unknown) as ClientRow[]).filter(
+              (row) => filterAgentNumberDigits(row.agent_number ?? "") === digitsFilter
+            );
+
+            // #region agent log
+            writeAgentNumberDebugLog({
+              runId: "agent-number-debug",
+              hypothesisId: "H1",
+              location: "client-repository.ts:digitsFallback",
+              message: "agent_number digits-only fallback",
+              data: {
+                filterAgentNumber: agentNumberFilter,
+                digitsFilter,
+                exactRowCount: 0,
+                digitsFallbackRowCount: matched.length,
+              },
+            });
+            // #endregion
+
+            if (matched.length > 0) {
+              return matched;
+            }
+          }
+        }
+
+        return rows;
       }
       lastError = result.error.message;
+      // #region agent log
+      if (user.role === "agent_number") {
+        writeAgentNumberDebugLog({
+          runId: "agent-number-debug",
+          hypothesisId: "H3",
+          location: "client-repository.ts:listClientRows:error",
+          message: "agent_number query error",
+          data: {
+            filterAgentNumber: agentNumberFilter,
+            useServiceRoleForAgentNumber,
+            errorMessage: lastError,
+          },
+        });
+      }
+      // #endregion
       const recoverable =
         lastError.includes("deal_created_at") ||
         lastError.includes("deal_creation_date") ||

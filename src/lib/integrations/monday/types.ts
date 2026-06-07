@@ -45,6 +45,17 @@ export type MondayFormulaColumnDebugSample = {
   parsedPaymentToAgentNumber: number;
 };
 
+/** Raw Monday `column_values` payload for one column (no parsing). */
+export type MondayColumnRawDebugSample = {
+  itemId: string;
+  columnId: string;
+  found: boolean;
+  type: string | null;
+  text: string | null;
+  display_value: string | null;
+  value: string | null;
+};
+
 /** TEMPORARY: admin debug API — raw item + column_values from Monday. */
 export type MondayItemDebugSnapshot = {
   id: string;
@@ -94,6 +105,10 @@ export type MondayOpportunitySyncResult = {
   sampleMasterPayments: number[];
   /** Up to 5 items: raw/parsed formula columns for master + sub-agent payment. */
   formulaColumnDebugSamples: MondayFormulaColumnDebugSample[];
+  /** Up to 5 items: raw Monday payload for `formula_mm2vcvt2` (תשלום לסוכן). */
+  sampleMasterPaymentRawColumns: MondayColumnRawDebugSample[];
+  /** Up to 5 items: raw Monday payload for `formula_mm3hmh8d` (תשלום למספר סוכן). */
+  samplePaymentToAgentNumberRawColumns: MondayColumnRawDebugSample[];
   /** Up to 5 raw Monday column payload samples for agent number column id. */
   sampleAgentNumberRawColumns: Array<{
     itemId: string;

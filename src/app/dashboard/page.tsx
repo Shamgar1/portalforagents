@@ -7,6 +7,10 @@ import { AgentDashboardView } from "@/components/agent-dashboard-view";
 import { DashboardClient } from "@/components/dashboard-client";
 import { LogoutButton } from "@/components/logout-button";
 import { MasterDashboardView } from "@/components/master-dashboard-view";
+import {
+  loadAgentNumberDiagnostic,
+  writeAgentNumberDebugLog,
+} from "@/lib/debug/agent-number-debug";
 import { getSessionUser } from "@/lib/auth/session";
 import { getClientService } from "@/lib/data/client-service";
 import { getSupabaseServiceRoleClient } from "@/lib/supabase/admin";
@@ -84,6 +88,50 @@ export default async function DashboardPage() {
   const isMaster = user.role === "master";
   const isAgentNumber = user.role === "agent_number";
 
+  const agentNumberDiagnostic = isAgentNumber
+    ? await loadAgentNumberDiagnostic(user.agentNumber, clients.length)
+    : null;
+
+  if (agentNumberDiagnostic) {
+    // #region agent log
+    writeAgentNumberDebugLog({
+      runId: "agent-number-debug",
+      hypothesisId: "H1-H3",
+      location: "dashboard/page.tsx:diagnostic",
+      message: "agent number dashboard diagnostic",
+      data: agentNumberDiagnostic,
+    });
+    // #endregion
+  }
+
+  // #region agent log
+  {
+    const distinctAgentNumbers = [
+      ...new Set(
+        clients
+          .map((c) => c.agentNumber?.trim())
+          .filter((n): n is string => Boolean(n))
+      ),
+    ].sort();
+    writeAgentNumberDebugLog({
+      runId: "agent-number-debug",
+      hypothesisId: "H1-H5",
+      location: "dashboard/page.tsx:afterLoadClients",
+      message: "dashboard clients loaded",
+      data: {
+        userRole: user.role,
+        userIdSuffix: user.id.slice(-6),
+        sessionAgentNumber: user.agentNumber ?? null,
+        sessionAgentNumberLen: user.agentNumber?.length ?? 0,
+        clientsCount: clients.length,
+        distinctAgentNumbersCount: distinctAgentNumbers.length,
+        distinctAgentNumbersSample: distinctAgentNumbers.slice(0, 15),
+        loadPath: user.role === "master" ? "service_role_direct" : "listClientsForUser",
+      },
+    });
+  }
+  // #endregion
+
   if (isMaster) {
     console.log("[master dashboard] direct clients loaded", { total: clients.length });
   }
@@ -145,7 +193,12 @@ export default async function DashboardPage() {
         ) : isMaster ? (
           <MasterDashboardView clients={clients} />
         ) : isAgentNumber ? (
-          <AgentNumberDashboardView clients={clients} agentNumber={user.agentNumber} />
+          <AgentNumberDashboardView
+            clients={clients}
+            role={user.role}
+            agentNumber={user.agentNumber}
+            appliedFilter={`clients.agent_number = "${user.agentNumber?.trim() ?? ""}"`}
+          />
         ) : (
           <AgentDashboardView clients={clients} />
         )}

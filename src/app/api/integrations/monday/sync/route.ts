@@ -82,6 +82,8 @@ export async function POST(request: Request) {
       masterPaymentColumnId: result.masterPaymentColumnId,
       paymentToAgentNumberColumnId: result.paymentToAgentNumberColumnId,
       formulaColumnDebugSamples: result.formulaColumnDebugSamples,
+      sampleMasterPaymentRawColumns: result.sampleMasterPaymentRawColumns,
+      samplePaymentToAgentNumberRawColumns: result.samplePaymentToAgentNumberRawColumns,
       agentNumberColumnId: result.agentNumberColumnId,
       requestedColumnIds: result.requestedColumnIds,
       totalFetched: result.totalFetched,

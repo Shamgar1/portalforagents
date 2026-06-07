@@ -585,14 +585,22 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
   const overallSummary = useMemo(() => {
     return filteredClients.reduce(
       (acc, client) => {
-        acc.totalAgents.add(client.agentNumber?.trim() ?? "");
+        const agentKey = client.agentNumber?.trim() ?? "";
+        acc.totalAgents.add(agentKey);
         acc.totalLeads += 1;
         acc.totalLoanAmount += client.loanAmount ?? 0;
-        acc.totalMasterPayment += client.masterPayment ?? 0;
-        acc.totalAgentNumberPayment += client.paymentToAgentNumber ?? 0;
-        if (isSuccessfulLeadStatus(client.leadStatus)) acc.successful += 1;
-        else if (isFailedLeadStatusContaining(client.leadStatus)) acc.failed += 1;
-        else if (isInProgressLeadStatus(client.leadStatus)) acc.inProgress += 1;
+
+        if (isSuccessfulLeadStatus(client.leadStatus)) {
+          acc.successful += 1;
+          acc.totalDistributedCommission += client.paymentToAgentNumber ?? 0;
+          acc.totalExpectedCommission += client.masterPayment ?? 0;
+        } else if (isFailedLeadStatusContaining(client.leadStatus)) {
+          acc.failed += 1;
+        } else if (isInProgressLeadStatus(client.leadStatus)) {
+          acc.inProgress += 1;
+          acc.totalExpectedCommission += client.masterPayment ?? 0;
+        }
+
         return acc;
       },
       {
@@ -602,8 +610,8 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         successful: 0,
         inProgress: 0,
         failed: 0,
-        totalMasterPayment: 0,
-        totalAgentNumberPayment: 0,
+        totalDistributedCommission: 0,
+        totalExpectedCommission: 0,
       }
     );
   }, [filteredClients]);
@@ -639,7 +647,13 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         <article className="card stat-card stat-card--rose">
           <p className="stat-label">עמלה שחולקה</p>
           <p className="stat-value stat-value-compact">
-            {formatCurrency(overallSummary.totalAgentNumberPayment)}
+            {formatCurrency(overallSummary.totalDistributedCommission)}
+          </p>
+        </article>
+        <article className="card stat-card stat-card--violet">
+          <p className="stat-label">עמלה כוללת</p>
+          <p className="stat-value stat-value-compact">
+            {formatCurrency(overallSummary.totalExpectedCommission)}
           </p>
         </article>
       </section>

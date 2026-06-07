@@ -41,6 +41,25 @@ type MondaySyncResponse = {
   unmatchedItems: unknown[];
   sampleReferringAgents?: string[];
   sampleMasterPayments?: number[];
+  formulaColumnDebugSamples?: unknown[];
+  sampleMasterPaymentRawColumns?: Array<{
+    itemId: string;
+    columnId: string;
+    found: boolean;
+    type: string | null;
+    text: string | null;
+    display_value: string | null;
+    value: string | null;
+  }>;
+  samplePaymentToAgentNumberRawColumns?: Array<{
+    itemId: string;
+    columnId: string;
+    found: boolean;
+    type: string | null;
+    text: string | null;
+    display_value: string | null;
+    value: string | null;
+  }>;
   sampleAgentNumberRawColumns?: Array<{
     itemId: string;
     found: boolean;
@@ -472,6 +491,39 @@ export function DashboardClient({ clients, canAddManualLead = false }: Dashboard
                 <p>
                   sampleMasterPayments: {syncResult.sampleMasterPayments.join(" · ")}
                 </p>
+              ) : null}
+              {syncResult.sampleMasterPaymentRawColumns &&
+              syncResult.sampleMasterPaymentRawColumns.length > 0 ? (
+                <div>
+                  <p className="font-medium">
+                    sampleMasterPaymentRawColumns (formula_mm2vcvt2,{" "}
+                    {syncResult.sampleMasterPaymentRawColumns.length})
+                  </p>
+                  <pre className="mt-1 max-h-48 overflow-auto rounded bg-black/5 p-2 text-xs">
+                    {JSON.stringify(syncResult.sampleMasterPaymentRawColumns, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
+              {syncResult.samplePaymentToAgentNumberRawColumns &&
+              syncResult.samplePaymentToAgentNumberRawColumns.length > 0 ? (
+                <div>
+                  <p className="font-medium">
+                    samplePaymentToAgentNumberRawColumns (formula_mm3hmh8d,{" "}
+                    {syncResult.samplePaymentToAgentNumberRawColumns.length})
+                  </p>
+                  <pre className="mt-1 max-h-48 overflow-auto rounded bg-black/5 p-2 text-xs">
+                    {JSON.stringify(syncResult.samplePaymentToAgentNumberRawColumns, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
+              {syncResult.formulaColumnDebugSamples &&
+              syncResult.formulaColumnDebugSamples.length > 0 ? (
+                <div>
+                  <p className="font-medium">formulaColumnDebugSamples</p>
+                  <pre className="mt-1 max-h-48 overflow-auto rounded bg-black/5 p-2 text-xs">
+                    {JSON.stringify(syncResult.formulaColumnDebugSamples, null, 2)}
+                  </pre>
+                </div>
               ) : null}
               {syncResult.sampleReferringAgents && syncResult.sampleReferringAgents.length > 0 ? (
                 <p>

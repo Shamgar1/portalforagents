@@ -4,6 +4,7 @@ import { getMondayEnv, getMondayOpportunitySyncEnv } from "@/lib/integrations/mo
 import type {
   MondayBoardPreview,
   MondayBoardService,
+  MondayColumnRawDebugSample,
   MondayItemDebugSnapshot,
   MondayOpportunityItem,
   MondayOpportunitySyncFetchResult,
@@ -645,6 +646,24 @@ export type ColumnMoneyParse = {
   raw: string | null;
   parsed: number;
 };
+
+/** Raw column_values fields for debugging (no parsing). */
+export function getColumnRawDebugSample(
+  item: MondayOpportunityItem,
+  columnId: string
+): MondayColumnRawDebugSample {
+  const col = item.columnValues.find((columnValue) => columnValue.id === columnId);
+
+  return {
+    itemId: item.id,
+    columnId,
+    found: Boolean(col),
+    type: col?.type ?? null,
+    text: col?.text ?? null,
+    display_value: col?.displayValue ?? null,
+    value: col?.value ?? null,
+  };
+}
 
 /** Money/formula columns: `text`, FormulaValue `display_value`, then JSON `value`. */
 export function getColumnMoney(item: MondayOpportunityItem, columnId: string): ColumnMoneyParse {
