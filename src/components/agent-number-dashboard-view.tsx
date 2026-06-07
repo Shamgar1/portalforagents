@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { formatCurrency } from "@/lib/dashboard/formatters";
+import { formatClientDealDate, formatCurrency } from "@/lib/dashboard/formatters";
 import {
   isFailedLeadStatusContaining,
   isInProgressLeadStatus,
@@ -25,11 +25,10 @@ function StatusSection({ title, clients }: StatusSectionProps) {
   const totals = useMemo(() => {
     return clients.reduce(
       (acc, client) => {
-        acc.agentCommission += client.expectedCommission;
         acc.agentNumberPayment += client.paymentToAgentNumber ?? 0;
         return acc;
       },
-      { agentCommission: 0, agentNumberPayment: 0 }
+      { agentNumberPayment: 0 }
     );
   }, [clients]);
 
@@ -43,10 +42,6 @@ function StatusSection({ title, clients }: StatusSectionProps) {
             <strong>{clients.length}</strong>
           </div>
           <div className="kpi-card">
-            <span>תשלום לסוכן</span>
-            <strong>{formatCurrency(totals.agentCommission)}</strong>
-          </div>
-          <div className="kpi-card">
             <span>תשלום למספר סוכן</span>
             <strong>{formatCurrency(totals.agentNumberPayment)}</strong>
           </div>
@@ -57,8 +52,6 @@ function StatusSection({ title, clients }: StatusSectionProps) {
           <thead>
             <tr>
               <th>שם לקוח</th>
-              <th>סוכן מפנה</th>
-              <th className="loan-amount-cell">תשלום לסוכן</th>
               <th className="loan-amount-cell">תשלום למספר סוכן</th>
               <th>סטטוס</th>
             </tr>
@@ -66,7 +59,7 @@ function StatusSection({ title, clients }: StatusSectionProps) {
           <tbody>
             {clients.length === 0 ? (
               <tr>
-                <td className="table-empty" colSpan={5}>
+                <td className="table-empty" colSpan={3}>
                   אין לידים בקטגוריה זו.
                 </td>
               </tr>
@@ -74,15 +67,62 @@ function StatusSection({ title, clients }: StatusSectionProps) {
             {clients.map((client) => (
               <tr key={client.id}>
                 <td className="td-name">{client.clientName}</td>
-                <td>{client.referringAgentText?.trim() || "—"}</td>
-                <td className="loan-amount-cell">
-                  <span className="loan-amount-inner">{formatCurrency(client.expectedCommission)}</span>
-                </td>
                 <td className="loan-amount-cell">
                   <span className="loan-amount-inner">
                     {formatCurrency(client.paymentToAgentNumber ?? 0)}
                   </span>
                 </td>
+                <td>
+                  <span
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getLeadStatusBadgeClass(
+                      client.leadStatus
+                    )}`}
+                  >
+                    {getLeadStatusLabel(client.leadStatus)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function FailedLeadsSection({ clients }: { clients: ClientRecord[] }) {
+  return (
+    <section className="dashboard-card" dir="rtl">
+      <div className="section-header">
+        <h2>לידים ללא הצלחה</h2>
+        <div className="kpi-grid">
+          <div className="kpi-card">
+            <span>מספר לידים</span>
+            <strong>{clients.length}</strong>
+          </div>
+        </div>
+      </div>
+      <div className="table-wrap">
+        <table className="dashboard-table">
+          <thead>
+            <tr>
+              <th>שם לקוח</th>
+              <th>תאריך ביצוע</th>
+              <th>סטטוס</th>
+            </tr>
+          </thead>
+          <tbody>
+            {clients.length === 0 ? (
+              <tr>
+                <td className="table-empty" colSpan={3}>
+                  אין לידים בקטגוריה זו.
+                </td>
+              </tr>
+            ) : null}
+            {clients.map((client) => (
+              <tr key={client.id}>
+                <td className="td-name">{client.clientName}</td>
+                <td>{formatClientDealDate(client)}</td>
                 <td>
                   <span
                     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getLeadStatusBadgeClass(
@@ -128,7 +168,7 @@ export function AgentNumberDashboardView({
       </section>
       <StatusSection title="לידים שבוצעו בהצלחה" clients={successfulLeads} />
       <StatusSection title="לידים בתהליך" clients={inProgressLeads} />
-      <StatusSection title="לידים ללא הצלחה" clients={failedLeads} />
+      <FailedLeadsSection clients={failedLeads} />
     </div>
   );
 }
