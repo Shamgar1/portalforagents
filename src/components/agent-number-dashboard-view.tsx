@@ -161,9 +161,8 @@ export function AgentNumberDashboardView({
   return (
     <div className="agent-dashboard-shell">
       <section className="card p-6" dir="rtl">
-        <h2 className="admin-analytics-title">תצוגה לפי מספר סוכן</h2>
         <p className="admin-analytics-subtitle text-sm text-slate-600">
-          מציג רק את הלידים המשויכים למספר הסוכן שלך: <strong>{agentNumber || "לא הוגדר"}</strong>
+          מספר סוכן: <strong>{agentNumber || "לא הוגדר"}</strong>
         </p>
       </section>
       <StatusSection title="לידים שבוצעו בהצלחה" clients={successfulLeads} />
