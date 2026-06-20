@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { formatClientDealDate, formatCurrency } from "@/lib/dashboard/formatters";
+import { BrandLogo } from "@/components/brand-logo";
 import {
   isFailedLeadStatusContaining,
   isInProgressLeadStatus,
@@ -166,11 +167,13 @@ export function AgentNumberDashboardView({
   );
 
   return (
-    <div className="agent-dashboard-shell">
-      <section className="card p-6" dir="rtl">
-        <p className="admin-analytics-subtitle text-sm text-slate-600">
-          מספר סוכן: <strong>{agentNumber || "לא הוגדר"}</strong>
-        </p>
+    <div className="agent-dashboard-shell agent-number-portal">
+      <section className="agent-number-brand-banner" dir="rtl">
+        <BrandLogo tone="light" />
+        <div className="agent-number-agent-chip">
+          <span>מספר סוכן</span>
+          <strong>{agentNumber || "לא הוגדר"}</strong>
+        </div>
       </section>
       <StatusSection
         title="עסקאות שבוצעו בהצלחה"

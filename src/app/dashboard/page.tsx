@@ -4,6 +4,7 @@ import { AgentNumberDashboardView } from "@/components/agent-number-dashboard-vi
 import { AdminAgentManagement } from "@/components/admin-agent-management";
 import { AdminAnalytics } from "@/components/admin-analytics";
 import { AgentDashboardView } from "@/components/agent-dashboard-view";
+import { BrandLogoMark } from "@/components/brand-logo";
 import { DashboardClient } from "@/components/dashboard-client";
 import { LogoutButton } from "@/components/logout-button";
 import { MasterDashboardView } from "@/components/master-dashboard-view";
@@ -102,11 +103,9 @@ export default async function DashboardPage() {
         <div className="navbar-inner">
           <div className="brand">
             <div className="brand-mark">
-              <svg viewBox="0 0 18 18" aria-hidden="true">
-                <path d="M3 9h12M9 3v12" />
-              </svg>
+              <BrandLogoMark className="brand-mark-logo" />
             </div>
-            פורטל סוכנים
+            <span className="brand-name" dir="rtl">אפיקי אשראי מומנטום</span>
           </div>
 
           <div className="navbar-end">

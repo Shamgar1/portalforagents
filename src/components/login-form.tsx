@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from "react";
 
+import { BrandLogoMark } from "@/components/brand-logo";
+
 type LoginState = {
   error: string | null;
   loading: boolean;
@@ -56,13 +58,11 @@ export function LoginForm() {
   return (
     <form className="card login-card" onSubmit={handleSubmit}>
       <div className="login-header">
-        <div className="login-logo">
+        <div className="login-logo" dir="rtl">
           <div className="login-logo-mark">
-            <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M2 8h12M8 2v12" />
-            </svg>
+            <BrandLogoMark />
           </div>
-          פורטל סוכנים
+          אפיקי אשראי מומנטום
         </div>
         <h1 className="login-title">כניסה לחשבון</h1>
         <p className="login-subtitle">הזינו את פרטי המשתמש שהוגדרו עבורכם ב-Supabase כדי להיכנס לפורטל.</p>

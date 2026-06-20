@@ -2,20 +2,26 @@
 
 /* â”€â”€â”€ Design tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 :root {
-  --bg: #eef2ff;
+  /* ── אפיקי אשראי מומנטום brand palette ── */
+  --brand-navy:   #1e2154;
+  --brand-blue:   #3753a4;
+  --brand-sky:    #68b9e2;
+  --brand-light:  #f4f4f4;
+
+  --bg: #f0f4fa;
   --surface: #ffffff;
-  --surface-2: #f5f3ff;
+  --surface-2: rgba(104, 185, 226, 0.08);
   --text: #0f172a;
-  --text-2: #1e1b4b;
-  --muted: #6b7280;
-  --line: #ddd6fe;
+  --text-2: var(--brand-navy);
+  --muted: #5a6a8a;
+  --line: rgba(55, 83, 164, 0.18);
 
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-soft: #e0e7ff;
+  --primary: var(--brand-blue);
+  --primary-hover: #2c429e;
+  --primary-soft: rgba(55, 83, 164, 0.12);
 
-  --shadow-sm: 0 1px 3px rgba(79, 70, 229, 0.06), 0 1px 8px rgba(79, 70, 229, 0.08);
-  --shadow: 0 4px 20px rgba(79, 70, 229, 0.10), 0 1px 4px rgba(15, 23, 42, 0.06);
+  --shadow-sm: 0 1px 3px rgba(30, 33, 84, 0.06), 0 1px 8px rgba(30, 33, 84, 0.08);
+  --shadow: 0 4px 20px rgba(30, 33, 84, 0.10), 0 1px 4px rgba(15, 23, 42, 0.06);
 
   --radius-sm: 8px;
   --radius: 12px;
@@ -62,9 +68,9 @@ a {
   top: 0;
   z-index: 100;
   height: var(--navbar-h);
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4c1d95 100%);
+  background: linear-gradient(135deg, var(--brand-blue) 0%, var(--brand-navy) 100%);
   border-bottom: none;
-  box-shadow: 0 4px 24px rgba(30, 27, 75, 0.35);
+  box-shadow: 0 4px 24px rgba(30, 33, 84, 0.35);
 }
 
 .navbar-inner {
@@ -87,14 +93,19 @@ a {
 }
 
 .brand-mark {
-  width: 32px;
+  width: 44px;
   height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #818cf8, #a78bfa);
+  border-radius: 0;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.4);
+  box-shadow: none;
+}
+
+.brand-mark svg.brand-mark-logo {
+  width: 44px;
+  height: 32px;
 }
 
 .brand-mark svg {
@@ -127,7 +138,7 @@ a {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #818cf8, #a78bfa);
+  background: linear-gradient(135deg, var(--brand-sky), var(--brand-blue));
   color: #fff;
   font-size: 0.8rem;
   font-weight: 700;
@@ -147,9 +158,9 @@ a {
 .role-badge {
   font-size: 0.7rem;
   font-weight: 700;
-  color: #c7d2fe;
-  background: rgba(99, 102, 241, 0.35);
-  border: 1px solid rgba(165, 180, 252, 0.3);
+  color: #fff;
+  background: rgba(104, 185, 226, 0.3);
+  border: 1px solid rgba(104, 185, 226, 0.45);
   padding: 3px 10px;
   border-radius: 999px;
   letter-spacing: 0.02em;
@@ -172,14 +183,14 @@ a {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-navy));
   color: #fff;
-  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.35);
+  box-shadow: 0 2px 10px rgba(55, 83, 164, 0.35);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4338ca, #6d28d9);
-  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.45);
+  background: linear-gradient(135deg, #2c429e, var(--brand-navy));
+  box-shadow: 0 4px 16px rgba(55, 83, 164, 0.45);
 }
 
 .btn-primary:disabled {
@@ -208,9 +219,9 @@ a {
   justify-content: center;
   padding: 24px;
   background:
-    radial-gradient(ellipse at 20% 20%, rgba(129, 140, 248, 0.25) 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 80%, rgba(167, 139, 250, 0.22) 0%, transparent 55%),
-    linear-gradient(160deg, #e0e7ff 0%, #f5f3ff 50%, #ede9fe 100%);
+    radial-gradient(ellipse at 20% 20%, rgba(104, 185, 226, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 80%, rgba(55, 83, 164, 0.14) 0%, transparent 55%),
+    linear-gradient(160deg, var(--brand-light) 0%, #ffffff 50%, rgba(104, 185, 226, 0.1) 100%);
 }
 
 .page-content {
@@ -236,7 +247,7 @@ a {
 
 /* â”€â”€â”€ Coloured stat-card accents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stat-card--indigo {
-  border-top: 3px solid #6366f1;
+  border-top: 3px solid var(--brand-blue);
 }
 
 .stat-card--emerald {
@@ -244,7 +255,7 @@ a {
 }
 
 .stat-card--violet {
-  border-top: 3px solid #8b5cf6;
+  border-top: 3px solid var(--brand-sky);
 }
 
 .stat-card--teal {
@@ -255,9 +266,9 @@ a {
   border-top: 3px solid #f43f5e;
 }
 
-.stat-card--indigo .stat-value  { color: #4f46e5; }
+.stat-card--indigo .stat-value  { color: var(--brand-blue); }
 .stat-card--emerald .stat-value { color: #059669; }
-.stat-card--violet .stat-value  { color: #7c3aed; }
+.stat-card--violet .stat-value  { color: var(--brand-navy); }
 .stat-card--teal .stat-value { color: #0f766e; }
 .stat-card--rose .stat-value { color: #be123c; }
 
@@ -306,23 +317,29 @@ a {
 }
 
 .login-logo-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  width: 48px;
+  height: 34px;
+  border-radius: 0;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+  box-shadow: none;
 }
 
 .login-logo-mark svg {
-  width: 16px;
-  height: 16px;
+  width: 48px;
+  height: 34px;
   fill: none;
-  stroke: #fff;
-  stroke-width: 2;
-  stroke-linecap: round;
+}
+
+.login-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--brand-navy);
 }
 
 .login-title {
@@ -462,11 +479,11 @@ a {
 .page-heading h1 {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--brand-navy);
 }
 
 .page-heading p {
-  color: var(--muted);
+  color: var(--brand-blue);
   font-size: 0.85rem;
 }
 
@@ -799,13 +816,100 @@ a {
   gap: 24px;
 }
 
+/* ─── Brand name in navbar ───────────────────────────────────────────── */
+.brand-name {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo-mark-svg {
+  width: 52px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.brand-logo-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.brand-logo-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.brand-logo-tagline {
+  font-size: 0.82rem;
+  line-height: 1.35;
+  opacity: 0.88;
+}
+
+.brand-logo-text--light .brand-logo-title,
+.brand-logo-text--light .brand-logo-tagline {
+  color: #ffffff;
+}
+
+.brand-logo-text--dark .brand-logo-title {
+  color: #1e2154;
+}
+
+.brand-logo-text--dark .brand-logo-tagline {
+  color: #3753a4;
+}
+
+/* ─── Agent Number brand banner (inside agent-number-portal) ─────────── */
+.agent-number-portal .agent-number-brand-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 28px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, var(--brand-blue) 0%, var(--brand-navy) 100%);
+  box-shadow: 0 14px 36px rgba(30, 33, 84, 0.22);
+}
+
+.agent-number-portal .agent-number-agent-chip {
+  display: grid;
+  gap: 4px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: rgba(104, 185, 226, 0.16);
+  border: 1px solid rgba(104, 185, 226, 0.42);
+  text-align: right;
+}
+
+.agent-number-portal .agent-number-agent-chip span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.agent-number-portal .agent-number-agent-chip strong {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Dashboard cards (used by all roles) ────────────────────────────── */
 .dashboard-card {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--line);
   border-radius: 24px;
   padding: 24px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 12px 30px rgba(30, 33, 84, 0.06);
 }
 
 .dashboard-card .section-header {
@@ -821,7 +925,7 @@ a {
   font-size: 1.35rem;
   line-height: 1.25;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--brand-navy);
 }
 
 .kpi-grid {
@@ -831,12 +935,12 @@ a {
 }
 
 .kpi-card {
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, rgba(104, 185, 226, 0.10) 0%, #ffffff 100%);
+  border: 1px solid var(--line);
   border-radius: 18px;
   padding: 18px 20px;
   text-align: right;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 4px 14px rgba(30, 33, 84, 0.04);
 }
 
 .kpi-card span {
@@ -845,25 +949,25 @@ a {
   font-size: 0.85rem;
   line-height: 1.35;
   font-weight: 600;
-  color: #64748b;
+  color: var(--brand-blue);
 }
 
 .kpi-card strong {
   display: block;
   font-size: 1.8rem;
   line-height: 1.1;
-  font-weight: 850;
-  color: #1e1b4b;
+  font-weight: 800;
+  color: var(--brand-navy);
   font-variant-numeric: tabular-nums;
 }
 
 .agent-table-card {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--line);
   border-radius: 24px;
   padding: 24px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 12px 30px rgba(30, 33, 84, 0.06);
 }
 
 .agent-table-header {
@@ -880,9 +984,9 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #ddd6fe;
-  background: #f5f3ff;
-  color: #6d28d9;
+  border: 1px solid var(--line);
+  background: var(--primary-soft);
+  color: var(--brand-blue);
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 0.85rem;
@@ -917,7 +1021,7 @@ table {
 }
 
 thead {
-  background: linear-gradient(90deg, #f5f3ff, #eef2ff);
+  background: linear-gradient(90deg, rgba(104, 185, 226, 0.15), var(--brand-light));
 }
 
 th {
@@ -931,7 +1035,7 @@ td {
 }
 
 tbody tr:hover {
-  background: #f5f3ff;
+  background: rgba(104, 185, 226, 0.09);
 }
 
 @media (max-width: 900px) {
@@ -1002,8 +1106,8 @@ td.loan-amount-cell {
   direction: ltr;
   unicode-bidi: isolate;
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
-  color: var(--text-2);
+  font-weight: 600;
+  color: var(--brand-blue);
 }
 
 /* Stack used when a currency value sits above an eligibility badge */
