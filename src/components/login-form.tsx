@@ -65,7 +65,6 @@ export function LoginForm() {
           אפיקי אשראי מומנטום
         </div>
         <h1 className="login-title">כניסה לחשבון</h1>
-        <p className="login-subtitle">הזינו את פרטי המשתמש שהוגדרו עבורכם ב-Supabase כדי להיכנס לפורטל.</p>
       </div>
 
       <div className="login-fields">
