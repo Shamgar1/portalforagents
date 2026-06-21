@@ -17,6 +17,12 @@ type AgentNumberDashboardViewProps = {
   agentNumber?: string;
 };
 
+const COMPACT_SECTION_STYLE = { padding: "16px 18px" } as const;
+const COMPACT_GRID_STYLE = { gap: "10px" } as const;
+const COMPACT_CARD_STYLE = { padding: "12px 14px", minHeight: "auto" } as const;
+const COMPACT_LABEL_STYLE = { marginBottom: "4px", fontSize: "0.78rem" } as const;
+const COMPACT_VALUE_STYLE = { fontSize: "1.35rem", lineHeight: 1.05 } as const;
+
 type SectionTotals = {
   dealsCount: number;
   totalCommissions: number;
@@ -41,21 +47,21 @@ function SuccessfulDealsSection({ clients }: { clients: ClientRecord[] }) {
   }, [clients]);
 
   return (
-    <section className="dashboard-card" dir="rtl">
+    <section className="dashboard-card" dir="rtl" style={COMPACT_SECTION_STYLE}>
       <div className="section-header">
         <h2>עסקאות שבוצעו בהצלחה</h2>
-        <div className="kpi-grid">
-          <div className="kpi-card">
-            <span>כמות עסקאות</span>
-            <strong>{totals.dealsCount}</strong>
+        <div className="kpi-grid" style={COMPACT_GRID_STYLE}>
+          <div className="kpi-card" style={COMPACT_CARD_STYLE}>
+            <span style={COMPACT_LABEL_STYLE}>כמות עסקאות</span>
+            <strong style={COMPACT_VALUE_STYLE}>{totals.dealsCount}</strong>
           </div>
-          <div className="kpi-card">
-            <span>עמלות</span>
-            <strong>{formatCurrency(totals.totalCommissions)}</strong>
+          <div className="kpi-card" style={COMPACT_CARD_STYLE}>
+            <span style={COMPACT_LABEL_STYLE}>עמלות</span>
+            <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalCommissions)}</strong>
           </div>
-          <div className="kpi-card">
-            <span>סך עמלות ששולמו לסוכן</span>
-            <strong>{formatCurrency(totals.totalAgentCommission)}</strong>
+          <div className="kpi-card" style={COMPACT_CARD_STYLE}>
+            <span style={COMPACT_LABEL_STYLE}>סך עמלות ששולמו לסוכן</span>
+            <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalAgentCommission)}</strong>
           </div>
         </div>
       </div>
@@ -116,17 +122,17 @@ function InProgressDealsSection({ clients }: { clients: ClientRecord[] }) {
   }, [clients]);
 
   return (
-    <section className="dashboard-card" dir="rtl">
+    <section className="dashboard-card" dir="rtl" style={COMPACT_SECTION_STYLE}>
       <div className="section-header">
         <h2>עסקאות בתהליך</h2>
-        <div className="kpi-grid">
-          <div className="kpi-card">
-            <span>כמות עסקאות</span>
-            <strong>{totals.dealsCount}</strong>
+        <div className="kpi-grid" style={COMPACT_GRID_STYLE}>
+          <div className="kpi-card" style={COMPACT_CARD_STYLE}>
+            <span style={COMPACT_LABEL_STYLE}>כמות עסקאות</span>
+            <strong style={COMPACT_VALUE_STYLE}>{totals.dealsCount}</strong>
           </div>
-          <div className="kpi-card">
-            <span>עמלה פוטנציאלית</span>
-            <strong>{formatCurrency(totals.totalCommissions)}</strong>
+          <div className="kpi-card" style={COMPACT_CARD_STYLE}>
+            <span style={COMPACT_LABEL_STYLE}>עמלה פוטנציאלית</span>
+            <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalCommissions)}</strong>
           </div>
         </div>
       </div>
@@ -175,13 +181,13 @@ function InProgressDealsSection({ clients }: { clients: ClientRecord[] }) {
 
 function FailedLeadsSection({ clients }: { clients: ClientRecord[] }) {
   return (
-    <section className="dashboard-card" dir="rtl">
+    <section className="dashboard-card" dir="rtl" style={COMPACT_SECTION_STYLE}>
       <div className="section-header">
         <h2>עסקאות שלא התקדמו</h2>
-        <div className="kpi-grid">
-          <div className="kpi-card">
-            <span>כמות עסקאות</span>
-            <strong>{clients.length}</strong>
+        <div className="kpi-grid" style={COMPACT_GRID_STYLE}>
+          <div className="kpi-card" style={COMPACT_CARD_STYLE}>
+            <span style={COMPACT_LABEL_STYLE}>כמות עסקאות</span>
+            <strong style={COMPACT_VALUE_STYLE}>{clients.length}</strong>
           </div>
         </div>
       </div>
@@ -251,21 +257,21 @@ export function AgentNumberDashboardView({
           <strong>{agentNumber || "לא הוגדר"}</strong>
         </div>
       </section>
-      <section className="dashboard-card" dir="rtl">
+      <section className="dashboard-card" dir="rtl" style={COMPACT_SECTION_STYLE}>
         <div className="section-header">
           <h2>סיכום</h2>
-          <div className="kpi-grid">
-            <div className="kpi-card">
-              <span>כמות עסקאות</span>
-              <strong>{totals.dealsCount}</strong>
+          <div className="kpi-grid" style={COMPACT_GRID_STYLE}>
+            <div className="kpi-card" style={COMPACT_CARD_STYLE}>
+              <span style={COMPACT_LABEL_STYLE}>כמות עסקאות</span>
+              <strong style={COMPACT_VALUE_STYLE}>{totals.dealsCount}</strong>
             </div>
-            <div className="kpi-card">
-              <span>עמלות</span>
-              <strong>{formatCurrency(totals.totalCommissions)}</strong>
+            <div className="kpi-card" style={COMPACT_CARD_STYLE}>
+              <span style={COMPACT_LABEL_STYLE}>עמלות</span>
+              <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalCommissions)}</strong>
             </div>
-            <div className="kpi-card">
-              <span>סך עמלות ששולמו לסוכן</span>
-              <strong>{formatCurrency(totals.totalAgentCommission)}</strong>
+            <div className="kpi-card" style={COMPACT_CARD_STYLE}>
+              <span style={COMPACT_LABEL_STYLE}>סך עמלות ששולמו לסוכן</span>
+              <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalAgentCommission)}</strong>
             </div>
           </div>
         </div>

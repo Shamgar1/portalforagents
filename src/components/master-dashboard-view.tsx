@@ -304,6 +304,7 @@ type SectionStats = {
   count: number;
   totalLoanAmount: number;
   totalMasterPayment: number;
+  totalAgentNumberPayment: number;
 };
 
 function sectionStats(rows: ClientRecord[]): SectionStats {
@@ -312,12 +313,14 @@ function sectionStats(rows: ClientRecord[]): SectionStats {
       acc.count += 1;
       acc.totalLoanAmount += row.loanAmount ?? 0;
       acc.totalMasterPayment += row.masterPayment ?? 0;
+      acc.totalAgentNumberPayment += row.paymentToAgentNumber ?? 0;
       return acc;
     },
     {
       count: 0,
       totalLoanAmount: 0,
       totalMasterPayment: 0,
+      totalAgentNumberPayment: 0,
     }
   );
 }
@@ -358,6 +361,12 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
           <p className="stat-label">עמלות</p>
           <p className="stat-value stat-value-compact">{formatCurrency(stats.totalMasterPayment)}</p>
         </article>
+        <article className="card stat-card">
+          <p className="stat-label">עמלה לסוכן</p>
+          <p className="stat-value stat-value-compact">
+            {formatCurrency(stats.totalAgentNumberPayment)}
+          </p>
+        </article>
       </div>
 
       <div className="table-wrap">
@@ -368,12 +377,13 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
               <th>תאריך ביצוע</th>
               <th className="loan-amount-cell">סכום הלוואה</th>
               <th className="loan-amount-cell">עמלות</th>
+              <th className="loan-amount-cell">עמלה לסוכן</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td className="table-empty" colSpan={4}>
+                <td className="table-empty" colSpan={5}>
                   אין נתונים להצגה.
                 </td>
               </tr>
@@ -388,6 +398,11 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
                 <td className="loan-amount-cell">
                   <span className="loan-amount-inner">
                     {formatCurrency(client.masterPayment ?? 0)}
+                  </span>
+                </td>
+                <td className="loan-amount-cell">
+                  <span className="loan-amount-inner">
+                    {formatCurrency(client.paymentToAgentNumber ?? 0)}
                   </span>
                 </td>
               </tr>
@@ -642,6 +657,7 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
   // 2) Potential commissions = SUM(masterPayment) for in-process deals only.
   // 3) Top "עמלה כוללת" = completed commissions + potential commissions.
   const overallCommission = successfulStats.totalMasterPayment + inProgressStats.totalMasterPayment;
+  const totalPaidToAgents = successfulStats.totalAgentNumberPayment;
 
   return (
     <section className="grid gap-6 max-w-6xl mx-auto w-full" dir="rtl">
@@ -663,6 +679,10 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
           <p className="stat-value stat-value-compact">
             {formatCurrency(overallCommission)}
           </p>
+        </article>
+        <article className="card stat-card stat-card--rose">
+          <p className="stat-label">סכום העמלות ששולמו לסוכנים</p>
+          <p className="stat-value stat-value-compact">{formatCurrency(totalPaidToAgents)}</p>
         </article>
       </section>
 
