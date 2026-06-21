@@ -325,10 +325,6 @@ function sectionStats(rows: ClientRecord[]): SectionStats {
   );
 }
 
-function totalCommissionForClient(row: ClientRecord): number {
-  return (row.masterPayment ?? 0) + (row.paymentToAgentNumber ?? 0);
-}
-
 function formatExecutionDate(client: ClientRecord): string {
   const date = clientDate(client);
   if (!date) return "—";
@@ -622,12 +618,10 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
 
         if (isSuccessfulLeadStatus(client.leadStatus)) {
           acc.successful += 1;
-          acc.totalExpectedCommission += totalCommissionForClient(client);
         } else if (isFailedLeadStatusContaining(client.leadStatus)) {
           acc.failed += 1;
         } else if (isInProgressLeadStatus(client.leadStatus)) {
           acc.inProgress += 1;
-          acc.totalExpectedCommission += totalCommissionForClient(client);
         }
 
         return acc;
@@ -639,7 +633,6 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         successful: 0,
         inProgress: 0,
         failed: 0,
-        totalExpectedCommission: 0,
       }
     );
   }, [filteredClients]);
@@ -656,6 +649,10 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
     () => filteredClients.filter((client) => isFailedLeadStatusContaining(client.leadStatus)),
     [filteredClients]
   );
+
+  const successfulStats = useMemo(() => sectionStats(successfulRows), [successfulRows]);
+  const inProgressStats = useMemo(() => sectionStats(inProgressRows), [inProgressRows]);
+  const overallCommission = successfulStats.totalMasterPayment + inProgressStats.totalMasterPayment;
 
   return (
     <section className="grid gap-6 max-w-6xl mx-auto w-full" dir="rtl">
@@ -675,7 +672,7 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         <article className="card stat-card stat-card--violet">
           <p className="stat-label">עמלה כוללת</p>
           <p className="stat-value stat-value-compact">
-            {formatCurrency(overallSummary.totalExpectedCommission)}
+            {formatCurrency(overallCommission)}
           </p>
         </article>
       </section>
