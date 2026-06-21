@@ -17,41 +17,45 @@ type AgentNumberDashboardViewProps = {
   agentNumber?: string;
 };
 
-type StatusSectionProps = {
-  title: string;
-  clients: ClientRecord[];
-  paymentKpiLabel: string;
-  paymentColumnLabel: string;
+type SectionTotals = {
+  dealsCount: number;
+  totalCommissions: number;
+  totalAgentCommission: number;
 };
 
-function StatusSection({
-  title,
-  clients,
-  paymentKpiLabel,
-  paymentColumnLabel,
-}: StatusSectionProps) {
+function calculateTotals(clients: ClientRecord[]): SectionTotals {
+  return clients.reduce(
+    (acc, client) => {
+      acc.dealsCount += 1;
+      acc.totalCommissions += client.expectedCommission ?? 0;
+      acc.totalAgentCommission += client.paymentToAgentNumber ?? 0;
+      return acc;
+    },
+    { dealsCount: 0, totalCommissions: 0, totalAgentCommission: 0 }
+  );
+}
+
+function SuccessfulDealsSection({ clients }: { clients: ClientRecord[] }) {
   const totals = useMemo(() => {
-    return clients.reduce(
-      (acc, client) => {
-        acc.agentNumberPayment += client.paymentToAgentNumber ?? 0;
-        return acc;
-      },
-      { agentNumberPayment: 0 }
-    );
+    return calculateTotals(clients);
   }, [clients]);
 
   return (
     <section className="dashboard-card" dir="rtl">
       <div className="section-header">
-        <h2>{title}</h2>
+        <h2>עסקאות שבוצעו בהצלחה</h2>
         <div className="kpi-grid">
           <div className="kpi-card">
             <span>כמות עסקאות</span>
-            <strong>{clients.length}</strong>
+            <strong>{totals.dealsCount}</strong>
           </div>
           <div className="kpi-card">
-            <span>{paymentKpiLabel}</span>
-            <strong>{formatCurrency(totals.agentNumberPayment)}</strong>
+            <span>עמלות</span>
+            <strong>{formatCurrency(totals.totalCommissions)}</strong>
+          </div>
+          <div className="kpi-card">
+            <span>סך עמלות ששולמו לסוכן</span>
+            <strong>{formatCurrency(totals.totalAgentCommission)}</strong>
           </div>
         </div>
       </div>
@@ -60,7 +64,78 @@ function StatusSection({
           <thead>
             <tr>
               <th>שם לקוח</th>
-              <th className="loan-amount-cell">{paymentColumnLabel}</th>
+              <th>תאריך ביצוע</th>
+              <th className="loan-amount-cell">עמלות</th>
+              <th className="loan-amount-cell">עמלה לסוכן</th>
+              <th>סטטוס</th>
+            </tr>
+          </thead>
+          <tbody>
+            {clients.length === 0 ? (
+              <tr>
+                <td className="table-empty" colSpan={5}>
+                  אין לידים בקטגוריה זו.
+                </td>
+              </tr>
+            ) : null}
+            {clients.map((client) => (
+              <tr key={client.id}>
+                <td className="td-name">{client.clientName}</td>
+                <td>{formatClientDealDate(client)}</td>
+                <td className="loan-amount-cell">
+                  <span className="loan-amount-inner">
+                    {formatCurrency(client.expectedCommission ?? 0)}
+                  </span>
+                </td>
+                <td className="loan-amount-cell">
+                  <span className="loan-amount-inner">
+                    {formatCurrency(client.paymentToAgentNumber ?? 0)}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getLeadStatusBadgeClass(
+                      client.leadStatus
+                    )}`}
+                  >
+                    {getLeadStatusLabel(client.leadStatus)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function InProgressDealsSection({ clients }: { clients: ClientRecord[] }) {
+  const totals = useMemo(() => {
+    return calculateTotals(clients);
+  }, [clients]);
+
+  return (
+    <section className="dashboard-card" dir="rtl">
+      <div className="section-header">
+        <h2>עסקאות בתהליך</h2>
+        <div className="kpi-grid">
+          <div className="kpi-card">
+            <span>כמות עסקאות</span>
+            <strong>{totals.dealsCount}</strong>
+          </div>
+          <div className="kpi-card">
+            <span>עמלה פוטנציאלית</span>
+            <strong>{formatCurrency(totals.totalCommissions)}</strong>
+          </div>
+        </div>
+      </div>
+      <div className="table-wrap">
+        <table className="dashboard-table">
+          <thead>
+            <tr>
+              <th>שם לקוח</th>
+              <th className="loan-amount-cell">עמלה פוטנציאלית</th>
               <th>סטטוס</th>
             </tr>
           </thead>
@@ -77,7 +152,7 @@ function StatusSection({
                 <td className="td-name">{client.clientName}</td>
                 <td className="loan-amount-cell">
                   <span className="loan-amount-inner">
-                    {formatCurrency(client.paymentToAgentNumber ?? 0)}
+                    {formatCurrency(client.expectedCommission ?? 0)}
                   </span>
                 </td>
                 <td>
@@ -153,6 +228,7 @@ export function AgentNumberDashboardView({
   clients,
   agentNumber,
 }: AgentNumberDashboardViewProps) {
+  const totals = useMemo(() => calculateTotals(clients), [clients]);
   const successfulLeads = useMemo(
     () => clients.filter((client) => isSuccessfulLeadStatus(client.leadStatus)),
     [clients]
@@ -175,18 +251,27 @@ export function AgentNumberDashboardView({
           <strong>{agentNumber || "לא הוגדר"}</strong>
         </div>
       </section>
-      <StatusSection
-        title="עסקאות שבוצעו בהצלחה"
-        clients={successfulLeads}
-        paymentKpiLabel="סך עמלות ששולמו לסוכן"
-        paymentColumnLabel="עמלות"
-      />
-      <StatusSection
-        title="עסקאות בתהליך"
-        clients={inProgressLeads}
-        paymentKpiLabel="עמלה פוטנציאלית"
-        paymentColumnLabel="עמלה פוטנציאלית"
-      />
+      <section className="dashboard-card" dir="rtl">
+        <div className="section-header">
+          <h2>סיכום</h2>
+          <div className="kpi-grid">
+            <div className="kpi-card">
+              <span>כמות עסקאות</span>
+              <strong>{totals.dealsCount}</strong>
+            </div>
+            <div className="kpi-card">
+              <span>עמלות</span>
+              <strong>{formatCurrency(totals.totalCommissions)}</strong>
+            </div>
+            <div className="kpi-card">
+              <span>סך עמלות ששולמו לסוכן</span>
+              <strong>{formatCurrency(totals.totalAgentCommission)}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+      <SuccessfulDealsSection clients={successfulLeads} />
+      <InProgressDealsSection clients={inProgressLeads} />
       <FailedLeadsSection clients={failedLeads} />
     </div>
   );
