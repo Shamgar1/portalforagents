@@ -35,9 +35,7 @@ MONDAY_OPPORTUNITIES_BOARD_ID=...
 MONDAY_LEADS_BOARD_ID=...
 MONDAY_LOAN_AMOUNT_COLUMN_ID=...
 MONDAY_EXPECTED_COMMISSION_COLUMN_ID=...
-MONDAY_MASTER_PAYMENT_COLUMN_ID=...
 MONDAY_REFERRING_AGENT_COLUMN_ID=...
-MONDAY_SYNC_CRON_SECRET=...
 ```
 
 **סדר טעינת משתני סביבה (Next.js):** אם משתנה כבר קיים ב־`process.env` (למשל `export` בטרמינל, Docker, או סביבת אירוח), **הוא לא ידרס** את הערך מ־`.env.local`. אם תשובת הסנכרון מציגה `referringAgentColumnId` שונה ממה שבקובץ המקומי, בדקו שאין אותו שם גם בחוץ; לדוגמה `unset MONDAY_REFERRING_AGENT_COLUMN_ID` לפני `npm run dev`.
@@ -60,22 +58,6 @@ MONDAY_SYNC_CRON_SECRET=...
 ה-endpoint זמין ב-`GET /api/integrations/monday/board?limit=10` ורק משתמש `admin` מחובר יכול לגשת אליו כרגע.
 
 ה-preview הנוכחי קורא רק מ-`MONDAY_OPPORTUNITIES_BOARD_ID`. לוח ה-leads נשמר במבנה הקוד לעבודה עתידית בלבד ואינו בשימוש ב-MVP הנוכחי.
-
-### סנכרון אוטומטי (כל 24 שעות)
-
-נוסף endpoint ייעודי לסנכרון מתוזמן: `POST /api/integrations/monday/sync/auto`.
-
-- ה-endpoint ממוחשב לשרת/cron בלבד ומוגן ע"י `MONDAY_SYNC_CRON_SECRET`.
-- אפשר להעביר את הסוד ב-`x-sync-secret` או `Authorization: Bearer <secret>`.
-- ה-endpoint משתמש באותה לוגיקת סנכרון הקיימת של Monday (כמו הכפתור הידני), ומוסיף לוגים לשרת על התחלה/הצלחה/כישלון.
-
-דוגמת cron יומית בשרת Linux:
-
-```bash
-0 2 * * * curl -fsS -X POST \
-  -H "Authorization: Bearer $MONDAY_SYNC_CRON_SECRET" \
-  https://<your-domain>/api/integrations/monday/sync/auto >> /var/log/portal-monday-sync.log 2>&1
-```
 
 ## יצירת נתוני לקוחות
 
@@ -103,4 +85,70 @@ values
 npm install
 npm run dev
 ```
+
+## סנכרון יומי אוטומטי מ-Monday (VPS / PM2)
+
+המערכת כוללת endpoint ייעודי לסנכרון אוטומטי:
+
+- `POST /api/integrations/monday/sync/auto`
+- מאובטח באמצעות `MONDAY_SYNC_CRON_SECRET` (header: `x-sync-secret` או Bearer token)
+
+### משתני סביבה נדרשים בפרודקשן
+
+```bash
+MONDAY_SYNC_CRON_SECRET=<strong-random-secret>
+APP_BASE_URL=https://your-domain.com
+```
+
+### בדיקת Smoke חד-פעמית מהשרת
+
+אחרי שמגדירים את המשתנים על השרת:
+
+```bash
+/path/to/repo/scripts/run-monday-auto-sync.sh
+```
+
+מצופה לקבל JSON עם `ok: true`.
+
+### רישום cron פעם ביום (02:00 ישראל)
+
+```bash
+crontab -e
+```
+
+להוסיף:
+
+```cron
+CRON_TZ=Asia/Jerusalem
+0 2 * * * /path/to/repo/scripts/run-monday-auto-sync.sh >> /var/log/monday-auto-sync.log 2>&1
+```
+
+### לוגים
+
+- לוג ריצה יומית: `/var/log/monday-auto-sync.log`
+- אפשר לעקוב בזמן אמת:
+
+```bash
+tail -f /var/log/monday-auto-sync.log
+```
+
+### בדיקות אימות מומלצות
+
+1. **בדיקת הרשאה** (סוד שגוי) — אמור להחזיר `401`:
+
+```bash
+curl -i -X POST "https://your-domain.com/api/integrations/monday/sync/auto" \
+  -H "x-sync-secret: wrong-secret"
+```
+
+2. **בדיקת סנכרון תקין** (סוד נכון) — אמור להחזיר `ok: true`:
+
+```bash
+curl -i -X POST "https://your-domain.com/api/integrations/monday/sync/auto" \
+  -H "x-sync-secret: $MONDAY_SYNC_CRON_SECRET"
+```
+
+3. **בדיקת cron**:
+   - לאמת שה-job מוגדר: `crontab -l`
+   - לאמת ריצות ביומן: `grep "Monday auto sync" /var/log/monday-auto-sync.log`
 

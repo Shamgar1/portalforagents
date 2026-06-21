@@ -325,6 +325,10 @@ function sectionStats(rows: ClientRecord[]): SectionStats {
   );
 }
 
+function totalCommissionForClient(row: ClientRecord): number {
+  return (row.masterPayment ?? 0) + (row.paymentToAgentNumber ?? 0);
+}
+
 function formatExecutionDate(client: ClientRecord): string {
   const date = clientDate(client);
   if (!date) return "—";
@@ -358,7 +362,7 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
           <p className="stat-value stat-value-compact">{formatCurrency(stats.totalLoanAmount)}</p>
         </article>
         <article className="card stat-card">
-          <p className="stat-label">עמלה כוללת</p>
+          <p className="stat-label">עמלה שחולקה</p>
           <p className="stat-value stat-value-compact">{formatCurrency(stats.totalMasterPayment)}</p>
         </article>
         <article className="card stat-card">
@@ -376,13 +380,14 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
               <th>שם לקוח</th>
               <th>תאריך ביצוע</th>
               <th className="loan-amount-cell">סכום הלוואה</th>
-              <th className="loan-amount-cell">עמלה כוללת</th>
+              <th className="loan-amount-cell">עמלה שחולקה</th>
+              <th className="loan-amount-cell">עמלה לסוכן</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td className="table-empty" colSpan={4}>
+                <td className="table-empty" colSpan={5}>
                   אין נתונים להצגה.
                 </td>
               </tr>
@@ -394,9 +399,14 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
                 <td className="loan-amount-cell">
                   <span className="loan-amount-inner">{formatCurrency(client.loanAmount ?? 0)}</span>
                 </td>
-                <td>
+                <td className="loan-amount-cell">
                   <span className="loan-amount-inner">
                     {formatCurrency(client.masterPayment ?? 0)}
+                  </span>
+                </td>
+                <td className="loan-amount-cell">
+                  <span className="loan-amount-inner">
+                    {formatCurrency(client.paymentToAgentNumber ?? 0)}
                   </span>
                 </td>
               </tr>
@@ -431,9 +441,9 @@ function InProgressSection({ rows }: InProgressSectionProps) {
           <p className="stat-value stat-value-compact">{formatCurrency(stats.totalLoanAmount)}</p>
         </article>
         <article className="card stat-card">
-          <p className="stat-label">עמלות פוטנציאליות</p>
+          <p className="stat-label">עמלה פוטנציאלית</p>
           <p className="stat-value stat-value-compact">
-            {formatCurrency(stats.totalMasterPayment + stats.totalAgentNumberPayment)}
+            {formatCurrency(stats.totalMasterPayment)}
           </p>
         </article>
       </div>
@@ -445,12 +455,13 @@ function InProgressSection({ rows }: InProgressSectionProps) {
               <th>שם לקוח</th>
               <th>סטטוס ליד</th>
               <th className="loan-amount-cell">סכום הלוואה</th>
+              <th className="loan-amount-cell">עמלה פוטנציאלית</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td className="table-empty" colSpan={3}>
+                <td className="table-empty" colSpan={4}>
                   אין נתונים להצגה.
                 </td>
               </tr>
@@ -469,6 +480,11 @@ function InProgressSection({ rows }: InProgressSectionProps) {
                 </td>
                 <td className="loan-amount-cell">
                   <span className="loan-amount-inner">{formatCurrency(client.loanAmount ?? 0)}</span>
+                </td>
+                <td className="loan-amount-cell">
+                  <span className="loan-amount-inner">
+                    {formatCurrency(client.masterPayment ?? 0)}
+                  </span>
                 </td>
               </tr>
             ))}
@@ -505,12 +521,14 @@ function FailedSection({ rows }: FailedSectionProps) {
             <tr>
               <th>שם לקוח</th>
               <th>תאריך ביצוע</th>
+              <th>סטטוס</th>
+              <th className="loan-amount-cell">סכום הלוואה</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td className="table-empty" colSpan={2}>
+                <td className="table-empty" colSpan={4}>
                   אין נתונים להצגה.
                 </td>
               </tr>
@@ -519,6 +537,18 @@ function FailedSection({ rows }: FailedSectionProps) {
               <tr key={client.id}>
                 <td className="td-name">{client.clientName}</td>
                 <td>{formatExecutionDate(client)}</td>
+                <td>
+                  <span
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getLeadStatusBadgeClass(
+                      client.leadStatus
+                    )}`}
+                  >
+                    {getLeadStatusLabel(client.leadStatus)}
+                  </span>
+                </td>
+                <td className="loan-amount-cell">
+                  <span className="loan-amount-inner">{formatCurrency(client.loanAmount ?? 0)}</span>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -592,13 +622,12 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
 
         if (isSuccessfulLeadStatus(client.leadStatus)) {
           acc.successful += 1;
-          acc.totalDistributedCommission += client.paymentToAgentNumber ?? 0;
-          acc.totalExpectedCommission += client.masterPayment ?? 0;
+          acc.totalExpectedCommission += totalCommissionForClient(client);
         } else if (isFailedLeadStatusContaining(client.leadStatus)) {
           acc.failed += 1;
         } else if (isInProgressLeadStatus(client.leadStatus)) {
           acc.inProgress += 1;
-          acc.totalExpectedCommission += client.masterPayment ?? 0;
+          acc.totalExpectedCommission += totalCommissionForClient(client);
         }
 
         return acc;
@@ -610,7 +639,6 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         successful: 0,
         inProgress: 0,
         failed: 0,
-        totalDistributedCommission: 0,
         totalExpectedCommission: 0,
       }
     );
@@ -643,12 +671,6 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
         <article className="card stat-card stat-card--teal">
           <p className="stat-label">סכום הלוואות מבוקש</p>
           <p className="stat-value stat-value-compact">{formatCurrency(overallSummary.totalLoanAmount)}</p>
-        </article>
-        <article className="card stat-card stat-card--rose">
-          <p className="stat-label">עמלה שחולקה</p>
-          <p className="stat-value stat-value-compact">
-            {formatCurrency(overallSummary.totalDistributedCommission)}
-          </p>
         </article>
         <article className="card stat-card stat-card--violet">
           <p className="stat-label">עמלה כוללת</p>
