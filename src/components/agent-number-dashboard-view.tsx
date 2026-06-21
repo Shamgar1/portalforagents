@@ -56,10 +56,6 @@ function SuccessfulDealsSection({ clients }: { clients: ClientRecord[] }) {
             <strong style={COMPACT_VALUE_STYLE}>{totals.dealsCount}</strong>
           </div>
           <div className="kpi-card" style={COMPACT_CARD_STYLE}>
-            <span style={COMPACT_LABEL_STYLE}>עמלות</span>
-            <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalCommissions)}</strong>
-          </div>
-          <div className="kpi-card" style={COMPACT_CARD_STYLE}>
             <span style={COMPACT_LABEL_STYLE}>סך עמלות ששולמו לסוכן</span>
             <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalAgentCommission)}</strong>
           </div>
@@ -264,10 +260,6 @@ export function AgentNumberDashboardView({
             <div className="kpi-card" style={COMPACT_CARD_STYLE}>
               <span style={COMPACT_LABEL_STYLE}>כמות עסקאות</span>
               <strong style={COMPACT_VALUE_STYLE}>{totals.dealsCount}</strong>
-            </div>
-            <div className="kpi-card" style={COMPACT_CARD_STYLE}>
-              <span style={COMPACT_LABEL_STYLE}>עמלות</span>
-              <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalCommissions)}</strong>
             </div>
             <div className="kpi-card" style={COMPACT_CARD_STYLE}>
               <span style={COMPACT_LABEL_STYLE}>סך עמלות ששולמו לסוכן</span>
