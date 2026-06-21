@@ -304,7 +304,6 @@ type SectionStats = {
   count: number;
   totalLoanAmount: number;
   totalMasterPayment: number;
-  totalAgentNumberPayment: number;
 };
 
 function sectionStats(rows: ClientRecord[]): SectionStats {
@@ -313,14 +312,12 @@ function sectionStats(rows: ClientRecord[]): SectionStats {
       acc.count += 1;
       acc.totalLoanAmount += row.loanAmount ?? 0;
       acc.totalMasterPayment += row.masterPayment ?? 0;
-      acc.totalAgentNumberPayment += row.paymentToAgentNumber ?? 0;
       return acc;
     },
     {
       count: 0,
       totalLoanAmount: 0,
       totalMasterPayment: 0,
-      totalAgentNumberPayment: 0,
     }
   );
 }
@@ -345,7 +342,7 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
   return (
     <section className="card p-6">
       <div className="mb-4">
-        <h3 className="admin-analytics-title">בוצע ושולם</h3>
+        <h3 className="admin-analytics-title">עסקאות שבוצעו בהצלחה</h3>
       </div>
 
       <div className="stats-row mb-4">
@@ -358,14 +355,8 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
           <p className="stat-value stat-value-compact">{formatCurrency(stats.totalLoanAmount)}</p>
         </article>
         <article className="card stat-card">
-          <p className="stat-label">עמלה שחולקה</p>
+          <p className="stat-label">עמלות</p>
           <p className="stat-value stat-value-compact">{formatCurrency(stats.totalMasterPayment)}</p>
-        </article>
-        <article className="card stat-card">
-          <p className="stat-label">עמלה לסוכן</p>
-          <p className="stat-value stat-value-compact">
-            {formatCurrency(stats.totalAgentNumberPayment)}
-          </p>
         </article>
       </div>
 
@@ -376,14 +367,13 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
               <th>שם לקוח</th>
               <th>תאריך ביצוע</th>
               <th className="loan-amount-cell">סכום הלוואה</th>
-              <th className="loan-amount-cell">עמלה שחולקה</th>
-              <th className="loan-amount-cell">עמלה לסוכן</th>
+              <th className="loan-amount-cell">עמלות</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td className="table-empty" colSpan={5}>
+                <td className="table-empty" colSpan={4}>
                   אין נתונים להצגה.
                 </td>
               </tr>
@@ -398,11 +388,6 @@ function SuccessfulSection({ rows }: SuccessfulSectionProps) {
                 <td className="loan-amount-cell">
                   <span className="loan-amount-inner">
                     {formatCurrency(client.masterPayment ?? 0)}
-                  </span>
-                </td>
-                <td className="loan-amount-cell">
-                  <span className="loan-amount-inner">
-                    {formatCurrency(client.paymentToAgentNumber ?? 0)}
                   </span>
                 </td>
               </tr>
@@ -424,7 +409,7 @@ function InProgressSection({ rows }: InProgressSectionProps) {
   return (
     <section className="card p-6">
       <div className="mb-4">
-        <h3 className="admin-analytics-title">לקוחות בתהליך</h3>
+        <h3 className="admin-analytics-title">עסקאות בתהליך</h3>
       </div>
 
       <div className="stats-row mb-4">
@@ -652,6 +637,10 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
 
   const successfulStats = useMemo(() => sectionStats(successfulRows), [successfulRows]);
   const inProgressStats = useMemo(() => sectionStats(inProgressRows), [inProgressRows]);
+  // Commission model:
+  // 1) Completed commissions = SUM(masterPayment) for successful deals only.
+  // 2) Potential commissions = SUM(masterPayment) for in-process deals only.
+  // 3) Top "עמלה כוללת" = completed commissions + potential commissions.
   const overallCommission = successfulStats.totalMasterPayment + inProgressStats.totalMasterPayment;
 
   return (
@@ -705,6 +694,9 @@ export function MasterDashboardView({ clients }: MasterDashboardViewProps) {
       </section>
 
       <SuccessfulSection rows={successfulRows} />
+      <p className="text-xs text-slate-500 px-2">
+        * תאריך הביצוע הינו תאריך מתן ההלוואה ולא תאריך התשלום בפועל
+      </p>
       <InProgressSection rows={inProgressRows} />
       <FailedSection rows={failedRows} />
     </section>
