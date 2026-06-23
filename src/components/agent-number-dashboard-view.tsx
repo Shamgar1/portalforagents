@@ -269,6 +269,9 @@ export function AgentNumberDashboardView({
         </div>
       </section>
       <SuccessfulDealsSection clients={successfulLeads} />
+      <p className="text-xs text-slate-500 px-2">
+        * תאריך הביצוע הינו תאריך מתן ההלוואה ולא תאריך התשלום בפועל
+      </p>
       <InProgressDealsSection clients={inProgressLeads} />
       <FailedLeadsSection clients={failedLeads} />
     </div>
