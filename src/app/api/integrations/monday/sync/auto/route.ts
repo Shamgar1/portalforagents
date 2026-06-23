@@ -75,6 +75,7 @@ export async function POST(request: Request) {
   while (attempts < MAX_ATTEMPTS) {
     attempts += 1;
     try {
+      console.info("auto sync using service role client: true");
       const result = await runMondayOpportunitySync({ demoItemLimit });
       console.info("[Monday auto sync] completed", {
         runId,

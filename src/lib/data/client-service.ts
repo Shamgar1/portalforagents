@@ -6,6 +6,7 @@ import type {
 } from "@/lib/data/client-repository";
 import { getClientRepository } from "@/lib/data/client-repository";
 import { mapProfileRow } from "@/lib/auth/user";
+import { getSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
   DEFAULT_MASTER_PAYMENT_COLUMN_ID,
@@ -363,7 +364,7 @@ class DefaultClientService implements ClientService {
   }
 
   private async listSyncProfiles(): Promise<SyncProfile[]> {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServiceRoleClient();
     const { data, error } = await supabase
       .from("profiles")
       .select("id, full_name")

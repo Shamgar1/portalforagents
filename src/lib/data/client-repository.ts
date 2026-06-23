@@ -249,7 +249,8 @@ class SupabaseClientRepository implements ClientRepository {
       return;
     }
 
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServiceRoleClient();
+    console.info("auto sync using service role client: true");
     const totalChunks = Math.ceil(rows.length / UPSERT_CHUNK_SIZE);
 
     for (let offset = 0; offset < rows.length; offset += UPSERT_CHUNK_SIZE) {
@@ -292,7 +293,7 @@ class SupabaseClientRepository implements ClientRepository {
   }
 
   async countAllClients(): Promise<number> {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServiceRoleClient();
     const { count, error } = await supabase
       .from("clients")
       .select("*", { count: "exact", head: true });
