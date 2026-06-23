@@ -25,7 +25,6 @@ const COMPACT_VALUE_STYLE = { fontSize: "1.35rem", lineHeight: 1.05 } as const;
 
 type SectionTotals = {
   dealsCount: number;
-  totalCommissions: number;
   totalAgentCommission: number;
 };
 
@@ -33,11 +32,10 @@ function calculateTotals(clients: ClientRecord[]): SectionTotals {
   return clients.reduce(
     (acc, client) => {
       acc.dealsCount += 1;
-      acc.totalCommissions += client.expectedCommission ?? 0;
       acc.totalAgentCommission += client.paymentToAgentNumber ?? 0;
       return acc;
     },
-    { dealsCount: 0, totalCommissions: 0, totalAgentCommission: 0 }
+    { dealsCount: 0, totalAgentCommission: 0 }
   );
 }
 
@@ -67,7 +65,6 @@ function SuccessfulDealsSection({ clients }: { clients: ClientRecord[] }) {
             <tr>
               <th>שם לקוח</th>
               <th>תאריך ביצוע</th>
-              <th className="loan-amount-cell">עמלות</th>
               <th className="loan-amount-cell">עמלה לסוכן</th>
               <th>סטטוס</th>
             </tr>
@@ -75,7 +72,7 @@ function SuccessfulDealsSection({ clients }: { clients: ClientRecord[] }) {
           <tbody>
             {clients.length === 0 ? (
               <tr>
-                <td className="table-empty" colSpan={5}>
+                <td className="table-empty" colSpan={4}>
                   אין לידים בקטגוריה זו.
                 </td>
               </tr>
@@ -84,11 +81,6 @@ function SuccessfulDealsSection({ clients }: { clients: ClientRecord[] }) {
               <tr key={client.id}>
                 <td className="td-name">{client.clientName}</td>
                 <td>{formatClientDealDate(client)}</td>
-                <td className="loan-amount-cell">
-                  <span className="loan-amount-inner">
-                    {formatCurrency(client.expectedCommission ?? 0)}
-                  </span>
-                </td>
                 <td className="loan-amount-cell">
                   <span className="loan-amount-inner">
                     {formatCurrency(client.paymentToAgentNumber ?? 0)}
@@ -128,7 +120,7 @@ function InProgressDealsSection({ clients }: { clients: ClientRecord[] }) {
           </div>
           <div className="kpi-card" style={COMPACT_CARD_STYLE}>
             <span style={COMPACT_LABEL_STYLE}>עמלה פוטנציאלית</span>
-            <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalCommissions)}</strong>
+            <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalAgentCommission)}</strong>
           </div>
         </div>
       </div>
@@ -154,7 +146,7 @@ function InProgressDealsSection({ clients }: { clients: ClientRecord[] }) {
                 <td className="td-name">{client.clientName}</td>
                 <td className="loan-amount-cell">
                   <span className="loan-amount-inner">
-                    {formatCurrency(client.expectedCommission ?? 0)}
+                    {formatCurrency(client.paymentToAgentNumber ?? 0)}
                   </span>
                 </td>
                 <td>
@@ -230,7 +222,6 @@ export function AgentNumberDashboardView({
   clients,
   agentNumber,
 }: AgentNumberDashboardViewProps) {
-  const totals = useMemo(() => calculateTotals(clients), [clients]);
   const successfulLeads = useMemo(
     () => clients.filter((client) => isSuccessfulLeadStatus(client.leadStatus)),
     [clients]
@@ -243,6 +234,10 @@ export function AgentNumberDashboardView({
     () => clients.filter((client) => isFailedLeadStatusContaining(client.leadStatus)),
     [clients]
   );
+  const successfulTotals = useMemo(() => calculateTotals(successfulLeads), [successfulLeads]);
+  const inProgressTotals = useMemo(() => calculateTotals(inProgressLeads), [inProgressLeads]);
+  const totalAgentEarnings =
+    successfulTotals.totalAgentCommission + inProgressTotals.totalAgentCommission;
 
   return (
     <div className="agent-dashboard-shell agent-number-portal">
@@ -259,11 +254,11 @@ export function AgentNumberDashboardView({
           <div className="kpi-grid" style={COMPACT_GRID_STYLE}>
             <div className="kpi-card" style={COMPACT_CARD_STYLE}>
               <span style={COMPACT_LABEL_STYLE}>כמות עסקאות</span>
-              <strong style={COMPACT_VALUE_STYLE}>{totals.dealsCount}</strong>
+              <strong style={COMPACT_VALUE_STYLE}>{clients.length}</strong>
             </div>
             <div className="kpi-card" style={COMPACT_CARD_STYLE}>
-              <span style={COMPACT_LABEL_STYLE}>סך עמלות ששולמו לסוכן</span>
-              <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totals.totalAgentCommission)}</strong>
+              <span style={COMPACT_LABEL_STYLE}>סך עמלות לסוכן</span>
+              <strong style={COMPACT_VALUE_STYLE}>{formatCurrency(totalAgentEarnings)}</strong>
             </div>
           </div>
         </div>
